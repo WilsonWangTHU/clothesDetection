@@ -1,3 +1,5 @@
+Hi, it's Tingwu Wang.
+
 The clothes detection is based on fast-rcnn by Mr. Ross
 In the file, several new function will be added.
 
