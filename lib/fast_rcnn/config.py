@@ -126,6 +126,9 @@ __C.EPS = 1e-14
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 
+# The place of files to store the information of the new data base
+__C.DB_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..', 'data', 'DB_info'))
+
 # Place outputs under an experiments directory
 __C.EXP_DIR = 'default'
 
