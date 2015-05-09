@@ -10,7 +10,9 @@
 __sets = {}
 
 import datasets.pascal_voc
+from fast_rcnn.config import cfg
 import numpy as np
+import 
 
 def _selective_search_IJCV_top_k(split, year, top_k):
     """Return an imdb that uses the top k proposals from the selective search
@@ -36,6 +38,13 @@ for top_k in np.arange(1000, 11000, 1000):
             name = 'voc_{}_{}_top_{:d}'.format(year, split, top_k)
             __sets[name] = (lambda split=split, year=year, top_k=top_k:
                     _selective_search_IJCV_top_k(split, year, top_k))
+
+# Enabling the use of new dataset
+new_db_dir = cfg.DB_DIR
+new_db_config = open(cfg.DB_DIR)
+for new_db_name in new_db_config:
+    name = new_db_name[:-1]
+    __sets[name] = 
 
 def get_imdb(name):
     """Get an imdb (image database) by name."""
