@@ -30,16 +30,48 @@ class new_database(datasets.imdb):
         # eg: /fast-rcnn/data/clothesDatabase/2015clothes
         self._data_path = os.path.join(self._devkit_path, db_name)  
 
-        self._classes = ('__background__', # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+        self._type_classes = ('风衣', '羊毛衫／羊绒衫',
+                              '棉服／羽绒服',  '小西装／短外套',
+                              '西服', '夹克', '旗袍', '皮衣', '皮草',
+                              '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
+                              '马甲', '男女背心及吊带', '卫衣',
+                              '雪纺衫', '连衣裙', '半身裙',
+                              '打底裤', '休闲裤', '牛仔裤', '短裤',
+                              '卫裤／运动裤'
+                              )
+        self._texture_classes = ('一致色', '横条纹', '纵条纹',
+                                 '其他条纹', '豹纹斑马纹', '格子',
+                                 '圆点', '乱花', 'LOGO及印花图案', '其他纹'
+                                 )
+        self._neckband_classes = ('圆领', 'V领', '翻领',
+                                  '立领', '高领', '围巾领',
+                                  '一字领', '大翻领西装领',
+                                  '连帽领', '其他领'
+                                  )
+        self._sleeve_classes = ('短袖', '中袖', '长袖')
+        self._classes = ('background', '风衣', '羊毛衫／羊绒衫',
+                         '棉服／羽绒服', '小西装／短外套',
+                         '西服', '夹克', '旗袍', '皮衣',
+                         '皮草', '婚纱', '衬衫', 'T恤',
+                         'Polo衫', '开衫', '马甲', '男女背心及吊带',
+                         '卫衣', '雪纺衫', '连衣裙', '半身裙',
+                         '打底裤', '休闲裤', '牛仔裤', '短裤',
+                         '卫裤／运动裤', '一致色', '横条纹',
+                         '纵条纹', '其他条纹', '豹纹斑马纹',
+                         '格子', '圆点', '乱花', 'LOGO及印花图案',
+                         '其他纹', '圆领', 'V领', '翻领', '立领',
+                         '高领', '围巾领', '一字领', '大翻领西装领',
+                         '连帽领', '其他领', '短袖', '中袖', '长袖'
+                         )
 
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
-        self._image_index = self._load_image_set_index()
+        self._label_ext = '.clothInfo'
+
+        # the name of the image, the type of the image, and the name of its
+        # label file
+        self._image_index, self._image_type, self._image_label = \
+            self._load_image_set_index()
         # Default to roidb handler
         self._roidb_handler = self.selective_search_roidb  # it is a function
 
@@ -57,37 +89,49 @@ class new_database(datasets.imdb):
         """
         Return the absolute path to image i in the image sequence.
         """
-        return self.image_path_from_index(self._image_index[i])
+        return self.image_path_from_index(i)
 
-    def image_path_from_index(self, index):
+    def image_path_from_index(self, i):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, 'JPEGImages',
-                                  index + self._image_ext)
+        image_path = os.path.join(self._data_path, str(self._image_type[i]),
+                                  str(self._image_index[i]) + self._image_ext)
         assert os.path.exists(image_path), \
-                'Path does not exist: {}'.format(image_path)
+            'image file does not exist: {}'.format(image_path)
         return image_path
 
     def _load_image_set_index(self):
         """
         Load the indexes listed in this dataset's image set file.
+        there are more than 26 sub files in the system
+        use the type_classes to read all the image!
         """
         # Example path to image set file:
-        # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-        image_set_file = os.path.join(self._data_path, 'ImageSets', '.txt')
-        assert os.path.exists(image_set_file), \
-                'Path does not exist: {}'.format(image_set_file)
-        with open(image_set_file) as f:
-            image_index = [x.strip() for x in f.readlines()]
-        return image_index
+        # /home/wtw/fast-rcnn/data/clothesDatabase/风衣
+        image_index = []
+        image_type = []
+        image_label = []
+        for class_type in xrange(1, len(self._type_classes) + 1):
+            image_set_file = os.path.join(data_path, str(class_type),
+                                          'GUIDMapping.txt')
+            assert os.path.exists(image_set_file), \
+                'index txt does not exist: {}'.format(image_set_file)
+            with open(image_set_file) as f:
+                for x in f.readlines():
+                    y = x.strip()
+                    image_index.append(y[y.find('\\') + 1: y.find('.jpg')])
+                    image_label.append(y[y.find('.jpg') + 4:])
+                    image_type.append(class_type)
+
+        return image_index, image_type, image_label
 
     def _get_default_path(self):
         """
         Return the default path of closes.
         """
-        return os.path.join(datasets.ROOT_DIR, 'data', 'clothesDatabase')
-
+        return os.path.join(datasets.ROOT_DIR, 'data')
+# -------------------------------------------------------------------------
     def gt_roidb(self):
         """
         Return the database of ground-truth regions of interest.
@@ -101,8 +145,8 @@ class new_database(datasets.imdb):
             print '{} gt roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        gt_roidb = [self._load_pascal_annotation(index)
-                    for index in self.image_index]
+        gt_roidb = [self._load_pascal_annotation(i)
+                    for i in xrange(len(self.image_index))]  # we change the def
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'wrote gt roidb to {}'.format(cache_file)
@@ -193,13 +237,13 @@ class new_database(datasets.imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-    def _load_pascal_annotation(self, index):
+    def _load_pascal_annotation(self, i):
         """
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
-        # print 'Loading: {}'.format(filename)
+        filename = os.path.join(self._data_path, str(self._image_type),
+                'Label', self._image_label + self._label_ext)
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
