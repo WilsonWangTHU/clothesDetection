@@ -31,13 +31,13 @@ class new_database(datasets.imdb):
         self._data_path = os.path.join(self._devkit_path, db_name)  
 
         self._type_classes = ('风衣', '羊毛衫／羊绒衫',
-                              '棉服／羽绒服',  '小西装／短外套',
+                              '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
                               '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
                               '马甲', '男女背心及吊带', '卫衣',
                               '雪纺衫', '连衣裙', '半身裙',
                               '打底裤', '休闲裤', '牛仔裤', '短裤',
-                              '卫裤／运动裤'
+                              '卫裤/运动裤'
                               )
         self._texture_classes = ('一致色', '横条纹', '纵条纹',
                                  '其他条纹', '豹纹斑马纹', '格子',
@@ -49,14 +49,14 @@ class new_database(datasets.imdb):
                                   '连帽领', '其他领'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
-        self._classes = ('background', '风衣', '羊毛衫／羊绒衫',
-                         '棉服／羽绒服', '小西装／短外套',
+        self._classes = ('background', '风衣', '羊毛衫/羊绒衫',
+                         '棉服/羽绒服', '小西装/短外套',
                          '西服', '夹克', '旗袍', '皮衣',
                          '皮草', '婚纱', '衬衫', 'T恤',
                          'Polo衫', '开衫', '马甲', '男女背心及吊带',
                          '卫衣', '雪纺衫', '连衣裙', '半身裙',
                          '打底裤', '休闲裤', '牛仔裤', '短裤',
-                         '卫裤／运动裤', '一致色', '横条纹',
+                         '卫裤/运动裤', '一致色', '横条纹',
                          '纵条纹', '其他条纹', '豹纹斑马纹',
                          '格子', '圆点', '乱花', 'LOGO及印花图案',
                          '其他纹', '圆领', 'V领', '翻领', '立领',
@@ -131,7 +131,7 @@ class new_database(datasets.imdb):
         Return the default path of closes.
         """
         return os.path.join(datasets.ROOT_DIR, 'data')
-# -------------------------------------------------------------------------
+
     def gt_roidb(self):
         """
         Return the database of ground-truth regions of interest.
@@ -169,12 +169,11 @@ class new_database(datasets.imdb):
             print '{} ss roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        if int(self._year) == 2007 or self._image_set != 'test':
-            gt_roidb = self.gt_roidb()
-            ss_roidb = self._load_selective_search_roidb(gt_roidb)
-            roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
-        else:
-            roidb = self._load_selective_search_roidb(None)
+        # it is changed
+        gt_roidb = self.gt_roidb()
+        ss_roidb = self._load_selective_search_roidb(gt_roidb)
+        roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
+
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'wrote ss roidb to {}'.format(cache_file)
@@ -182,16 +181,16 @@ class new_database(datasets.imdb):
         return roidb
 
     def _load_selective_search_roidb(self, gt_roidb):
-        filename = os.path.abspath(os.path.join(self.cache_path, '..',
-                                                'selective_search_data',
-                                                self.name + '.mat'))
-        assert os.path.exists(filename), \
-               'Selective search data not found at: {}'.format(filename)
-        raw_data = sio.loadmat(filename)['boxes'].ravel()
-
         box_list = []
-        for i in xrange(raw_data.shape[0]):
-            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
+        # read data from each sub file
+        for i in xrange(len(self._type_classes)):
+            filename = os.path.abspath(os.path.join(datasets.ROOT_DIR, 'data',
+                                       self.name, str(i), 'boxes.mat'))
+            assert os.path.exists(filename), \
+                'Selective search data not found at: {}'.format(filename)
+            raw_data = sio.loadmat(filename)['boxes'].ravel()
+            for i in xrange(raw_data.shape[0]):
+                box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -242,40 +241,116 @@ class new_database(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, str(self._image_type),
-                'Label', self._image_label + self._label_ext)
+        filename = os.path.join(self._data_path, str(self._image_type[i]),
+                                'Label', self._image_label[i] + self._label_ext)
+
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
         with open(filename) as f:
             data = minidom.parseString(f.read())
 
-        objs = data.getElementsByTagName('object')
-        num_objs = len(objs)
+        type_objs = data.getElementsByTagName('clothClass')
+        texture_objs = data.getElementsByTagName('clothClass')
+
+        neckband_objs = data.getElementsByTagName('clothNeckband')
+        sleeve_objs = data.getElementsByTagName('clothSleeve')
+        num_objs = len(neckband_objs) + len(sleeve_objs) + len(texture_objs)\
+            len(type_objs)
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
 
         # Load object bounding boxes into a data frame.
-        for ix, obj in enumerate(objs):
+        # first we load the type class and the texture class
+        for ix, obj in enumerate(type_objs):
+            # add type class and texture class simultaneously
+            dx = len(type_objs)
+
             # Make pixel indexes 0-based
-            x1 = float(get_data_from_tag(obj, 'xmin')) - 1
-            y1 = float(get_data_from_tag(obj, 'ymin')) - 1
-            x2 = float(get_data_from_tag(obj, 'xmax')) - 1
-            y2 = float(get_data_from_tag(obj, 'ymax')) - 1
-            cls = self._class_to_ind[
-                    str(get_data_from_tag(obj, "name")).lower().strip()]
+            location = obj.getElementsByTagName('Location')[0]
+            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
+            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
+            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
+            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
+
+            cls_str = obj.getAttributeNode('type').childNodes[0].data
+            cls_str = cls_str.encode('utf-8')  # change the unicode into str
+
+            cls = self._class_to_ind[cls_str]
+
+            # add type class
+            boxes[ix, :] = [x1, y1, x2, y2]
+            gt_classes[ix] = cls
+            overlaps[ix, cls] = 1.0
+
+            # for the texture
+            tex_cls_str = texture_objs[ix].getAttributeNode('type').childNodes[0].data
+            tex_cls_str = tex_cls_str.encode('utf-8')  # change the unicode into str
+            tex_cls = self._class_to_ind[tex_cls_str]
+            # add texture class
+            boxes[ix + dx, :] = [x1, y1, x2, y2]
+            gt_classes[ix + dx] = cls
+            overlaps[ix + dx, tex_cls] = 1.0
+
+        # loading the object bounding box of the sleeve type and the neckband type
+        dx = len(type_objs) + len(texture_objs)
+        for ix, obj in enumerate(neckband_objs):
+            # Make pixel indexes 0-based
+            location = obj.getElementsByTagName('Location')[0]
+            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
+            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
+            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
+            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
+
+            # check for validation
+            validation = float(location.getAttributeNode(
+                'SourceQuality').childNodes[0].data)
+            if validation != u'Valid':
+                continue  # this box is useless, continue
+
+            cls_str = obj.getAttributeNode('type').childNodes[0].data
+            cls_str = cls_str.encode('utf-8')  # change the unicode into str
+
+            cls = self._class_to_ind[cls_str]
+
+            # add type class
+            boxes[ix, :] = [x1, y1, x2, y2]
+            gt_classes[ix] = cls
+            overlaps[ix, cls] = 1.0
+
+        dx = len(type_objs) + len(texture_objs) + len(neckband_objs)
+        for ix, obj in enumerate(sleeve_objs):
+            # check for validation
+            validation = float(location.getAttributeNode(
+                'SourceQuality').childNodes[0].data)
+            if validation != u'Valid':
+                continue  # this box is useless, continue
+
+            # Make pixel indexes 0-based
+            location = obj.getElementsByTagName('Location')[0]
+            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
+            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
+            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
+            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
+
+            cls_str = obj.getAttributeNode('type').childNodes[0].data
+            cls_str = cls_str.encode('utf-8')  # change the unicode into str
+
+            cls = self._class_to_ind[cls_str]
+
+            # add type class
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
-        return {'boxes' : boxes,
+        return {'boxes': boxes,
                 'gt_classes': gt_classes,
-                'gt_overlaps' : overlaps,
-                'flipped' : False}
+                'gt_overlaps': overlaps,
+                'flipped': False}
 
     def _write_voc_results_file(self, all_boxes):
         use_salt = self.config['use_salt']
