@@ -45,8 +45,10 @@ for top_k in np.arange(1000, 11000, 1000):
 new_db_dir = cfg.DB_DIR
 new_db_config = open(cfg.DB_DIR)
 for new_db_name in new_db_config:
-    name = new_db_name[:-1]
-    __sets[name] = (lambda name: datasets.new_database(name))
+    for stage in ['test', 'train']:
+        name = new_db_name[:-1]
+        __sets[new_db_name[:-1] + stage] = (lambda name=name, stage=stage:
+				            datasets.new_database(name, stage))
 
 
 def get_imdb(name):
