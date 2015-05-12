@@ -19,18 +19,21 @@ import subprocess
 
 
 ''' in this file, we try to enable new database to be used'''
-class new_database(datasets.imdb):
-    def __init__(self, db_name, devkit_path=None):
-        datasets.imdb.__init__(self, name)  # it is simply the name of db, no real data
-        self._devkit_path = self._get_default_path() if devkit_path is None \
-                            else devkit_path
 
-        # different databases is under the directory of 
+
+class new_database(datasets.imdb):
+
+    def __init__(self, db_name, stage, devkit_path=None):
+        datasets.imdb.__init__(self, db_name)  # it is simply the name of db, no real data
+        self._devkit_path = self._get_default_path() if devkit_path is None \
+            else devkit_path
+
+        # different databases is under the directory of
         # os.path.join(datasets.ROOT_DIR, 'data', 'clothesDatabase')
         # eg: /fast-rcnn/data/clothesDatabase/2015clothes
-        self._data_path = os.path.join(self._devkit_path, db_name)  
-
-        self._type_classes = ('风衣', '羊毛衫／羊绒衫',
+        self._data_path = os.path.join(self._devkit_path, db_name)
+        self._stage = stage
+        self._type_classes = ('风衣', '毛呢大衣', '羊毛衫／羊绒衫',
                               '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
                               '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
@@ -50,7 +53,7 @@ class new_database(datasets.imdb):
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
         self._classes = ('background', '风衣', '羊毛衫/羊绒衫',
-                         '棉服/羽绒服', '小西装/短外套',
+                         '毛呢大衣', '棉服/羽绒服', '小西装/短外套',
                          '西服', '夹克', '旗袍', '皮衣',
                          '皮草', '婚纱', '衬衫', 'T恤',
                          'Polo衫', '开衫', '马甲', '男女背心及吊带',
@@ -76,14 +79,14 @@ class new_database(datasets.imdb):
         self._roidb_handler = self.selective_search_roidb  # it is a function
 
         # specific config options
-        self.config = {'cleanup'  : True,
-                       'use_salt' : True,
-                       'top_k'    : 2000}
+        self.config = {'cleanup': True,
+                       'use_salt': True,
+                       'top_k': 2000}
 
         assert os.path.exists(self._devkit_path), \
-                'VOCdevkit path does not exist: {}'.format(self._devkit_path)
+            'VOCdevkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), \
-                'Path does not exist: {}'.format(self._data_path)
+            'Path does not exist: {}'.format(self._data_path)
 
     def image_path_at(self, i):
         """
@@ -95,7 +98,8 @@ class new_database(datasets.imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, str(self._image_type[i]),
+        image_path = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
+                                  'image_50',
                                   str(self._image_index[i]) + self._image_ext)
         assert os.path.exists(image_path), \
             'image file does not exist: {}'.format(image_path)
@@ -108,12 +112,12 @@ class new_database(datasets.imdb):
         use the type_classes to read all the image!
         """
         # Example path to image set file:
-        # /home/wtw/fast-rcnn/data/clothesDatabase/风衣
+        # /home/wtw/fast-rcnn/data/clothesDatabase/train/1
         image_index = []
         image_type = []
         image_label = []
         for class_type in xrange(1, len(self._type_classes) + 1):
-            image_set_file = os.path.join(data_path, str(class_type),
+            image_set_file = os.path.join(data_path, self._stage, str(class_type),
                                           'GUIDMapping.txt')
             assert os.path.exists(image_set_file), \
                 'index txt does not exist: {}'.format(image_set_file)
@@ -185,7 +189,7 @@ class new_database(datasets.imdb):
         # read data from each sub file
         for i in xrange(len(self._type_classes)):
             filename = os.path.abspath(os.path.join(datasets.ROOT_DIR, 'data',
-                                       self.name, str(i), 'boxes.mat'))
+                                       self.name, self._stage, str(i), 'boxes.mat'))
             assert os.path.exists(filename), \
                 'Selective search data not found at: {}'.format(filename)
             raw_data = sio.loadmat(filename)['boxes'].ravel()
@@ -202,8 +206,8 @@ class new_database(datasets.imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
         cache_file = os.path.join(self.cache_path,
-                '{:s}_selective_search_IJCV_top_{:d}_roidb.pkl'.
-                format(self.name, self.config['top_k']))
+                                  '{:s}_selective_search_IJCV_top_{:d}_roidb.pkl'.
+                                  format(self.name, self.config['top_k']))
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
@@ -225,14 +229,14 @@ class new_database(datasets.imdb):
                                                  'selective_search_IJCV_data',
                                                  'voc_' + self._year))
         assert os.path.exists(IJCV_path), \
-               'Selective search IJCV data not found at: {}'.format(IJCV_path)
+            'Selective search IJCV data not found at: {}'.format(IJCV_path)
 
         top_k = self.config['top_k']
         box_list = []
         for i in xrange(self.num_images):
             filename = os.path.join(IJCV_path, self.image_index[i] + '.mat')
             raw_data = sio.loadmat(filename)
-            box_list.append((raw_data['boxes'][:top_k, :]-1).astype(np.uint16))
+            box_list.append((raw_data['boxes'][:top_k, :] - 1).astype(np.uint16))
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -241,7 +245,7 @@ class new_database(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, str(self._image_type[i]),
+        filename = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
                                 'Label', self._image_label[i] + self._label_ext)
 
         def get_data_from_tag(node, tag):
