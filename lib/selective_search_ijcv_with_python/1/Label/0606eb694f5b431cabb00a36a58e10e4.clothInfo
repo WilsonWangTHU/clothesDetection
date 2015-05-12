@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<attributes>
+    <clothClass type="羊毛衫/羊绒衫">
+        <Location top="96.25" right="275.625" SourceQuality="Valid" left="71.45833333333333" bottom="333.9583333333333"/>
+    </clothClass>
+    <clothTexture type="横条纹"/>
+    <clothNeckband type="圆领">
+        <Location top="96.25" right="224.5833333333333" SourceQuality="Valid" left="150.9375" bottom="137.8125"/>
+    </clothNeckband>
+    <clothSleeve type="长袖">
+        <Location top="131.9791666666667" right="121.7708333333333" SourceQuality="Valid" left="70.72916666666667" bottom="334.6875"/>
+    </clothSleeve>
+    <clothSleeve type="长袖">
+        <Location top="126.875" right="276.3541666666667" SourceQuality="Valid" left="239.1666666666667" bottom="318.6458333333333"/>
+    </clothSleeve>
+</attributes>
