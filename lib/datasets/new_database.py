@@ -1,10 +1,11 @@
+#coding=utf-8
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
-
+from math import floor
 import datasets
 import datasets.new_database
 import os
@@ -16,7 +17,7 @@ import scipy.io as sio
 import utils.cython_bbox
 import cPickle
 import subprocess
-
+import PIL
 
 ''' in this file, we try to enable new database to be used'''
 
@@ -33,7 +34,7 @@ class new_database(datasets.imdb):
         # eg: /fast-rcnn/data/clothesDatabase/2015clothes
         self._data_path = os.path.join(self._devkit_path, db_name)
         self._stage = stage
-        self._type_classes = ('风衣', '毛呢大衣', '羊毛衫／羊绒衫',
+        self._type_classes = ('风衣', '毛呢大衣', '羊毛衫/羊绒衫',
                               '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
                               '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
@@ -52,7 +53,7 @@ class new_database(datasets.imdb):
                                   '连帽领', '其他领'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
-        self._classes = ('background', '风衣', '羊毛衫/羊绒衫',
+        self._classes = ('__background__', '风衣', '羊毛衫/羊绒衫',
                          '毛呢大衣', '棉服/羽绒服', '小西装/短外套',
                          '西服', '夹克', '旗袍', '皮衣',
                          '皮草', '婚纱', '衬衫', 'T恤',
@@ -68,7 +69,6 @@ class new_database(datasets.imdb):
                          )
 
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
-        self._image_ext = '.jpg'
         self._label_ext = '.clothInfo'
 
         # the name of the image, the type of the image, and the name of its
@@ -100,7 +100,7 @@ class new_database(datasets.imdb):
         """
         image_path = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
                                   'image_50',
-                                  str(self._image_index[i]) + self._image_ext)
+                                  str(self._image_index[i]))
         assert os.path.exists(image_path), \
             'image file does not exist: {}'.format(image_path)
         return image_path
@@ -117,15 +117,19 @@ class new_database(datasets.imdb):
         image_type = []
         image_label = []
         for class_type in xrange(1, len(self._type_classes) + 1):
-            image_set_file = os.path.join(data_path, self._stage, str(class_type),
+            image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
                                           'GUIDMapping.txt')
             assert os.path.exists(image_set_file), \
                 'index txt does not exist: {}'.format(image_set_file)
             with open(image_set_file) as f:
                 for x in f.readlines():
                     y = x.strip()
-                    image_index.append(y[y.find('\\') + 1: y.find('.jpg')])
-                    image_label.append(y[y.find('.jpg') + 4:])
+                    if y.find('.jpg') == -1:  # it is not a jpg file
+                        image_label.append(y[y.find('.png') + 1 + 4:])
+                        image_index.append(y[y.find('\\') + 1: y.find('.png')] + '.png')
+                    else:
+                        image_label.append(y[y.find('.jpg') + 1 + 4:])
+                        image_index.append(y[y.find('\\') + 1: y.find('.jpg')] + '.jpg')
                     image_type.append(class_type)
 
         return image_index, image_type, image_label
@@ -189,12 +193,12 @@ class new_database(datasets.imdb):
         # read data from each sub file
         for i in xrange(len(self._type_classes)):
             filename = os.path.abspath(os.path.join(datasets.ROOT_DIR, 'data',
-                                       self.name, self._stage, str(i), 'boxes.mat'))
+                                       self.name, self._stage, str(i + 1), 'boxes.mat'))
             assert os.path.exists(filename), \
                 'Selective search data not found at: {}'.format(filename)
             raw_data = sio.loadmat(filename)['boxes'].ravel()
-            for i in xrange(raw_data.shape[0]):
-                box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
+            for x in xrange(raw_data.shape[0]):
+                box_list.append(raw_data[x][:, (1, 0, 3, 2)] - 1)
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -247,7 +251,12 @@ class new_database(datasets.imdb):
         """
         filename = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
                                 'Label', self._image_label[i] + self._label_ext)
-
+        # make sure the annotation is within the picture
+        im = PIL.Image.open(self.image_path_at(i))
+        widths = im.size[0]
+        height = im.size[1]
+        if i == 167:
+            print widths
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
@@ -259,7 +268,7 @@ class new_database(datasets.imdb):
 
         neckband_objs = data.getElementsByTagName('clothNeckband')
         sleeve_objs = data.getElementsByTagName('clothSleeve')
-        num_objs = len(neckband_objs) + len(sleeve_objs) + len(texture_objs)\
+        num_objs = len(neckband_objs) + len(sleeve_objs) + len(texture_objs) + \
             len(type_objs)
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
@@ -274,15 +283,34 @@ class new_database(datasets.imdb):
 
             # Make pixel indexes 0-based
             location = obj.getElementsByTagName('Location')[0]
-            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
-            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
-            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
-            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
-
-            cls_str = obj.getAttributeNode('type').childNodes[0].data
-            cls_str = cls_str.encode('utf-8')  # change the unicode into str
-
-            cls = self._class_to_ind[cls_str]
+            
+            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
+            if validation != u'Valid':
+                # continue  # this box is useless, continue
+                x1 = widths / 3.0
+                x2 = widths / 3.0 * 2.0
+                y1 = height / 3.0
+                y2 = height / 3.0 * 2.0
+    
+                cls = self._image_type[i]  # change the unicode into str
+                print cls
+                print type(cls)
+    
+            else:
+                x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
+                y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
+                x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
+                y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
+    
+                x1 = min(x1, widths - 1)
+                x2 = min(x2, widths - 1)
+                y1 = min(y1, height - 1)
+                y2 = min(y2, height - 1)
+    
+                cls_str = obj.getAttributeNode('type').childNodes[0].data
+                cls_str = cls_str.encode('utf-8')  # change the unicode into str
+    
+                cls = self._class_to_ind[cls_str]
 
             # add type class
             boxes[ix, :] = [x1, y1, x2, y2]
@@ -290,8 +318,12 @@ class new_database(datasets.imdb):
             overlaps[ix, cls] = 1.0
 
             # for the texture
+            if validation != u'Valid':
+                continue
             tex_cls_str = texture_objs[ix].getAttributeNode('type').childNodes[0].data
             tex_cls_str = tex_cls_str.encode('utf-8')  # change the unicode into str
+            if tex_cls_str == '其他':
+                tex_cls_str = '其他纹'
             tex_cls = self._class_to_ind[tex_cls_str]
             # add texture class
             boxes[ix + dx, :] = [x1, y1, x2, y2]
@@ -303,51 +335,62 @@ class new_database(datasets.imdb):
         for ix, obj in enumerate(neckband_objs):
             # Make pixel indexes 0-based
             location = obj.getElementsByTagName('Location')[0]
-            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
-            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
-            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
-            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
 
+            x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
+            y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
+            x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
+            y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
+
+            x1 = min(x1, widths - 1)
+            x2 = min(x2, widths - 1)
+            y1 = min(y1, height - 1)
+            y2 = min(y2, height - 1)
             # check for validation
-            validation = float(location.getAttributeNode(
-                'SourceQuality').childNodes[0].data)
+            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
             if validation != u'Valid':
                 continue  # this box is useless, continue
 
             cls_str = obj.getAttributeNode('type').childNodes[0].data
             cls_str = cls_str.encode('utf-8')  # change the unicode into str
-
+            print cls_str
+            print type(cls_str)
+			
+            if cls_str == '其他':  # we have to devide them!
+                cls_str = '其他领'
             cls = self._class_to_ind[cls_str]
 
             # add type class
-            boxes[ix, :] = [x1, y1, x2, y2]
-            gt_classes[ix] = cls
-            overlaps[ix, cls] = 1.0
+            boxes[ix + dx, :] = [x1, y1, x2, y2]
+            gt_classes[ix + dx] = cls
+            overlaps[ix + dx, cls] = 1.0
 
         dx = len(type_objs) + len(texture_objs) + len(neckband_objs)
         for ix, obj in enumerate(sleeve_objs):
             # check for validation
-            validation = float(location.getAttributeNode(
-                'SourceQuality').childNodes[0].data)
-            if validation != u'Valid':
-                continue  # this box is useless, continue
 
             # Make pixel indexes 0-based
             location = obj.getElementsByTagName('Location')[0]
-            x1 = float(location.getAttributeNode('left').childNodes[0].data) - 1
-            y1 = float(location.getAttributeNode('top').childNodes[0].data) - 1
-            x2 = float(location.getAttributeNode('right').childNodes[0].data) - 1
-            y2 = float(location.getAttributeNode('bottom').childNodes[0].data) - 1
+            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
+            if validation != u'Valid':
+                continue  # this box is useless, continue
 
+            x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
+            y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
+            x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
+            y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
+
+            x1 = min(x1, widths - 1)
+            x2 = min(x2, widths - 1)
+            y1 = min(y1, height - 1)
+            y2 = min(y2, height - 1)
             cls_str = obj.getAttributeNode('type').childNodes[0].data
             cls_str = cls_str.encode('utf-8')  # change the unicode into str
-
             cls = self._class_to_ind[cls_str]
 
             # add type class
-            boxes[ix, :] = [x1, y1, x2, y2]
-            gt_classes[ix] = cls
-            overlaps[ix, cls] = 1.0
+            boxes[ix + dx, :] = [x1, y1, x2, y2]
+            gt_classes[ix + dx] = cls
+            overlaps[ix + dx, cls] = 1.0
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 

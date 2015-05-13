@@ -10,7 +10,7 @@
 __sets = {}
 
 import datasets.pascal_voc
-import datasets.new_database
+from datasets.new_database import new_database
 
 from fast_rcnn.config import cfg
 import numpy as np
@@ -47,12 +47,13 @@ new_db_config = open(cfg.DB_DIR)
 for new_db_name in new_db_config:
     for stage in ['test', 'train']:
         name = new_db_name[:-1]
-        __sets[new_db_name[:-1] + stage] = (lambda name=name, stage=stage:
-				            datasets.new_database(name, stage))
+        __sets[new_db_name[:-1] + '_' + stage] = (lambda name=name, stage=stage:
+				            new_database(name, stage))
 
 
 def get_imdb(name):
     """Get an imdb (image database) by name."""
+    print('the name of the dataset is {}'.format(name))
     if not __sets.has_key(name):
         raise KeyError('Unknown dataset: {}'.format(name))
     return __sets[name]()
