@@ -6,7 +6,7 @@
 # --------------------------------------------------------
 
 """Transform a roidb into a trainable roidb by adding a bunch of metadata."""
-
+from __future__ import division
 import numpy as np
 from fast_rcnn.config import cfg
 import utils.cython_bbox
@@ -29,12 +29,25 @@ def prepare_roidb(imdb):
         max_classes = gt_overlaps.argmax(axis=1)
         roidb[i]['max_classes'] = max_classes
         roidb[i]['max_overlaps'] = max_overlaps
+        #print imdb.image_path_at(i)
+        #print roidb[i]['max_classes'][np.where(roidb[i]['max_overlaps']>0.6)]
+        #print roidb[i]['max_overlaps'][np.where(roidb[i]['max_overlaps']>0.6)]
+        boxes = imdb.roidb[i]['boxes'].copy()
+        #print boxes[0,:]
+        #print boxes[1,:]
+        #print boxes[2,:]
+        #print boxes[3,:]
+        #print boxes[4,:]
+        #if i%10 == 0:
+        #    raw_input()
         # sanity checks
         # max overlap of 0 => class should be zero (background)
         zero_inds = np.where(max_overlaps == 0)[0]
         assert all(max_classes[zero_inds] == 0)
         # max overlap > 0 => class should not be zero (must be a fg class)
         nonzero_inds = np.where(max_overlaps > 0)[0]
+        boxes = imdb.roidb[i]['boxes'].copy()
+        #print np.where(max_classes[nonzero_inds] == 0)
         assert all(max_classes[nonzero_inds] != 0)
 
 def add_bbox_regression_targets(roidb):
@@ -51,6 +64,7 @@ def add_bbox_regression_targets(roidb):
         max_classes = roidb[im_i]['max_classes']
         roidb[im_i]['bbox_targets'] = \
                 _compute_targets(rois, max_overlaps, max_classes)
+        #print 'that was image %d'%im_i
 
     # Compute values needed for means and stds
     # var(x) = E(x^2) - E(x)^2
@@ -110,7 +124,9 @@ def _compute_targets(rois, overlaps, labels):
     gt_heights = gt_rois[:, 3] - gt_rois[:, 1] + cfg.EPS
     gt_ctr_x = gt_rois[:, 0] + 0.5 * gt_widths
     gt_ctr_y = gt_rois[:, 1] + 0.5 * gt_heights
-
+    #print gt_heights
+    #print ex_heights
+    #raw_input()
     targets_dx = (gt_ctr_x - ex_ctr_x) / ex_widths
     targets_dy = (gt_ctr_y - ex_ctr_y) / ex_heights
     targets_dw = np.log(gt_widths / ex_widths)

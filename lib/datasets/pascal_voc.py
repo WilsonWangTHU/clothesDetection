@@ -129,6 +129,13 @@ class pascal_voc(datasets.imdb):
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'wrote ss roidb to {}'.format(cache_file)
+        #for i in xrange(roidb[0]['boxes'].shape[0]):
+        #    print roidb[0]['gt_classes'][i]
+        #    print roidb[0]['boxes'][i]
+        #    if i%10 == 0:
+        #        raw_input()
+        # print rsdasdoidb[i]
+
 
         return roidb
 
