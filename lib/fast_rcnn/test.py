@@ -7,7 +7,7 @@
 
 """Test a Fast R-CNN network on an imdb (image database)."""
 
-from fast_rcnn.config import cfg, get_output_dir  # the config file, import two variables
+from fast_rcnn.config import cfg, get_output_dir
 import argparse
 from utils.timer import Timer
 import numpy as np
@@ -18,7 +18,6 @@ import cPickle
 import heapq
 from utils.blob import im_list_to_blob
 import os
-
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -31,22 +30,18 @@ def _get_image_blob(im):
         im_scale_factors (list): list of image scales (relative to im) used
             in the image pyramid
     """
-    im_orig = im.astype(np.float32, copy=True)  # it is simply a copy of format
-    ''' ndarray.astype(dtype, order='K', casting='unsafe', subok=True, copy=True)
-    Copy of the array, cast to a specified type.'''
-    im_orig -= cfg.PIXEL_MEANS  # deleting the picture means
+    im_orig = im.astype(np.float32, copy=True)
+    im_orig -= cfg.PIXEL_MEANS
 
     im_shape = im_orig.shape
     im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])  # get the size of the image
+    im_size_max = np.max(im_shape[0:2])
 
     processed_ims = []
     im_scale_factors = []
 
-    for target_size in cfg.TEST.SCALES:  # scaling the image, only small network with image scale
-        # note that there are multiple scales
+    for target_size in cfg.TEST.SCALES:
         im_scale = float(target_size) / float(im_size_min)
-
         # Prevent the biggest axis from being more than MAX_SIZE
         if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
             im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
@@ -56,9 +51,6 @@ def _get_image_blob(im):
         processed_ims.append(im)
 
     # Create a blob to hold the input images
-    """Convert a list of images into a network input.
-    Assumes images are already prepared (means subtracted, BGR order, ...).
-    """
     blob = im_list_to_blob(processed_ims)
 
     return blob, np.array(im_scale_factors)
@@ -90,9 +82,8 @@ def _project_im_rois(im_rois, scales):
     """
     im_rois = im_rois.astype(np.float, copy=False)
 
-    if len(scales) > 1:  # more than one scale
-        widths = im_rois[:, 2] - im_rois[:, 0] + 1  # all rois image part
-        # height and width, shape = (n, )
+    if len(scales) > 1:
+        widths = im_rois[:, 2] - im_rois[:, 0] + 1
         heights = im_rois[:, 3] - im_rois[:, 1] + 1
 
         areas = widths * heights
@@ -279,23 +270,22 @@ def test_net(net, imdb):
         os.makedirs(output_dir)
 
     # timers
-    _t = {'im_detect': Timer(), 'misc': Timer()}
+    _t = {'im_detect' : Timer(), 'misc' : Timer()}
 
     roidb = imdb.roidb
     for i in xrange(num_images):
-        im = cv2.imread(imdb.image_path_at(i))  # read the msg
+        im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
         scores, boxes = im_detect(net, im, roidb[i]['boxes'])
         _t['im_detect'].toc()
 
         _t['misc'].tic()
-        for j in xrange(1, imdb.num_classes):  # the j^{th} class
+        for j in xrange(1, imdb.num_classes):
             inds = np.where((scores[:, j] > thresh[j]) &
                             (roidb[i]['gt_classes'] == 0))[0]
-            cls_scores = scores[inds, j]  # all the scores above the threshhold
-            cls_boxes = boxes[inds, j * 4: (j + 1) * 4]
+            cls_scores = scores[inds, j]
+            cls_boxes = boxes[inds, j*4:(j+1)*4]
             top_inds = np.argsort(-cls_scores)[:max_per_image]
-
             cls_scores = cls_scores[top_inds]
             cls_boxes = cls_boxes[top_inds, :]
             # push new scores onto the minheap

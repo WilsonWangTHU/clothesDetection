@@ -93,10 +93,13 @@ class imdb(object):
 
     def append_flipped_images(self):
         num_images = self.num_images
-        widths = [PIL.Image.open(self.image_path_at(i)).size[0]
-                  for i in xrange(num_images)]
+        # I find something big! the PIL open has mistake!,making 
+		# width = 349
+        #widths = [PIL.Image.open(self.image_path_at(i)).size[0] for i in xrange(num_images)]
+        widths = [350 for i in xrange(num_images)]
         for i in xrange(num_images):
             boxes = self.roidb[i]['boxes'].copy()
+            
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
@@ -108,6 +111,7 @@ class imdb(object):
                      'flipped' : True}
             self.roidb.append(entry)
         self._image_index = self._image_index * 2
+        self._image_type = self._image_type * 2
 
     def evaluate_recall(self, candidate_boxes, ar_thresh=0.5):
         # Record max overlap value for each gt box
@@ -156,6 +160,10 @@ class imdb(object):
         roidb = []
         for i in xrange(self.num_images):
             boxes = box_list[i]
+            #print boxes
+            #print boxes.shape
+            #print bosdasdxes.shape
+            #print gt_roidb[i]['gt_classes']
             num_boxes = boxes.shape[0]
             overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
 
@@ -169,6 +177,10 @@ class imdb(object):
                 I = np.where(maxes > 0)[0]
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
 
+                #print maxes
+                #for i in xrange(len(maxes)):
+                #    print maxes[i]
+                #print bsdsadoxes
             overlaps = scipy.sparse.csr_matrix(overlaps)
             roidb.append({'boxes' : boxes,
                           'gt_classes' : np.zeros((num_boxes,),

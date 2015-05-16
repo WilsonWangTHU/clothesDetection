@@ -17,9 +17,7 @@ import os
 from caffe.proto import caffe_pb2
 import google.protobuf as pb2
 
-
 class SolverWrapper(object):
-
     """A simple wrapper around Caffe's solver.
     This wrapper gives us control over he snapshotting process, which we
     use to unnormalize the learned bounding-box regression weights.
@@ -30,10 +28,10 @@ class SolverWrapper(object):
         """Initialize the SolverWrapper."""
         self.output_dir = output_dir
 
-        print('Computing bounding-box regression targets...')
+        print 'Computing bounding-box regression targets...'
         self.bbox_means, self.bbox_stds = \
                 rdl_roidb.add_bbox_regression_targets(roidb)
-        print('done')
+        print 'done'
 
         self.solver = caffe.SGDSolver(solver_prototxt)
         if pretrained_model is not None:
@@ -90,7 +88,7 @@ class SolverWrapper(object):
         while self.solver.iter < max_iters:
             # Make one SGD update
             timer.tic()
-            self.solver.step(1) '''it is the key update'''
+            self.solver.step(1)
             timer.toc()
             if self.solver.iter % (10 * self.solver_param.display) == 0:
                 print 'speed: {:.3f}s / iter'.format(timer.average_time)
