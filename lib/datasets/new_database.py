@@ -18,9 +18,26 @@ import utils.cython_bbox
 import cPickle
 import subprocess
 import PIL
+import struct
+from fast_rcnn.config import cfg
+import sys
 
 ''' in this file, we try to enable new database to be used'''
 
+
+def twentysix2three(class_type):
+    if 1 <= class_type <= 7 \
+            or 9 <= class_type <= 10 \
+            or 12 <= class_type <= 19:
+        out_number = 1
+    else:
+        if class_type == 8 \
+                or class_type == 11 \
+                or class_type == 20:
+            out_number = 3
+        else:
+            out_number = 2
+    return out_number
 
 class new_database(datasets.imdb):
 
@@ -53,28 +70,42 @@ class new_database(datasets.imdb):
                                   '连帽领', '其他领'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
-        self._classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
-                         '棉服/羽绒服', '小西装/短外套',
-                         '西服', '夹克', '旗袍', '皮衣',
-                         '皮草', '婚纱', '衬衫', 'T恤',
-                         'Polo衫', '开衫', '马甲', '男女背心及吊带',
-                         '卫衣', '雪纺衫', '连衣裙', '半身裙',
-                         '打底裤', '休闲裤', '牛仔裤', '短裤',
-                         '卫裤/运动裤', '一致色', '横条纹',
-                         '纵条纹', '其他条纹', '豹纹斑马纹',
-                         '格子', '圆点', '乱花', 'LOGO及印花图案',
-                         '其他纹', '圆领', 'V领', '翻领', '立领',
-                         '高领', '围巾领', '一字领', '大翻领西装领',
-                         '连帽领', '其他领', '短袖', '中袖', '长袖'
-                         )
 
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        # for the three class detection, 1 for upper, 2 for lower, and
+        # three for clothes that covers the whole body
+        self._classes = ('__background__', 'Upper', 'Lower', 'Whole')
+#        self._classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
+#                         '棉服/羽绒服', '小西装/短外套',
+#                         '西服', '夹克', '旗袍', '皮衣',
+#                         '皮草', '婚纱', '衬衫', 'T恤',
+#                         'Polo衫', '开衫', '马甲', '男女背心及吊带',
+#                         '卫衣', '雪纺衫', '连衣裙', '半身裙',
+#                         '打底裤', '休闲裤', '牛仔裤', '短裤',
+#                         '卫裤/运动裤', '一致色', '横条纹',
+#                         '纵条纹', '其他条纹', '豹纹斑马纹',
+#                         '格子', '圆点', '乱花', 'LOGO及印花图案',
+#                         '其他纹', '圆领', 'V领', '翻领', '立领',
+#                         '高领', '围巾领', '一字领', '大翻领西装领',
+#                         '连帽领', '其他领', '短袖', '中袖', '长袖'
+#                         )
+
+        self._ts_classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
+                              '棉服/羽绒服',  '小西装/短外套',
+                              '西服', '夹克', '旗袍', '皮衣', '皮草',
+                              '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
+                              '马甲', '男女背心及吊带', '卫衣',
+                              '雪纺衫', '连衣裙', '半身裙',
+                              '打底裤', '休闲裤', '牛仔裤', '短裤',
+                              '卫裤/运动裤'
+                              )
+        self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
+        self._ts_class_to_ind = dict(zip(self._ts_classes, xrange(len(self._ts_classes))))
         self._label_ext = '.clothInfo'
 
         # the name of the image, the type of the image, and the name of its
         # label file
-        self._image_index, self._image_type, self._image_label = \
-            self._load_image_set_index()
+        self._image_index, self._image_type, self._image_label, \
+                self._image_twentysix_type = self._load_image_set_index()
         # Default to roidb handler
         self._roidb_handler = self.selective_search_roidb  # it is a function
 
@@ -98,11 +129,11 @@ class new_database(datasets.imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
-                                  'image_50',
+        # print "the index: {}, the type: {}".format(len(self._image_index), len(self._image_twentysix_type))
+        image_path = os.path.join(self._data_path, self._stage, str(self._image_twentysix_type[i]),
                                   str(self._image_index[i]))
         assert os.path.exists(image_path), \
-            'image file does not exist: {}'.format(image_path)
+            'image file does not exist: {}{}'.format(image_path, i)
         return image_path
 
     def _load_image_set_index(self):
@@ -116,23 +147,31 @@ class new_database(datasets.imdb):
         image_index = []
         image_type = []
         image_label = []
+        image_twentysix_type = []
         for class_type in xrange(1, len(self._type_classes) + 1):
+            # the twenty six type is useful when loading the annotations
             image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
-                                          'GUIDMapping.txt')
+                                          'newGUIDMapping.txt')
             assert os.path.exists(image_set_file), \
-                'index txt does not exist: {}'.format(image_set_file)
+                'index txt does not exist: {}{}'.format(image_set_file)
             with open(image_set_file) as f:
                 for x in f.readlines():
+                    # when using the three class, it is a different label way
                     y = x.strip()
+                    image_twentysix_type.append(class_type)
+
+                    if cfg.ThreeClass == False:
+                        image_type.append(class_type)
+                    else:
+                        image_type.append(twentysix2three(class_type))
                     if y.find('.jpg') == -1:  # it is not a jpg file
                         image_label.append(y[y.find('.png') + 1 + 4:])
                         image_index.append(y[y.find('\\') + 1: y.find('.png')] + '.png')
                     else:
                         image_label.append(y[y.find('.jpg') + 1 + 4:])
                         image_index.append(y[y.find('\\') + 1: y.find('.jpg')] + '.jpg')
-                    image_type.append(class_type)
-
-        return image_index, image_type, image_label
+                        
+        return image_index, image_type, image_label, image_twentysix_type
 
     def _get_default_path(self):
         """
@@ -155,6 +194,7 @@ class new_database(datasets.imdb):
 
         gt_roidb = [self._load_pascal_annotation(i)
                     for i in xrange(len(self.image_index))]  # we change the def
+        print 'Finish loading annotations'
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'wrote gt roidb to {}'.format(cache_file)
@@ -180,11 +220,12 @@ class new_database(datasets.imdb):
         # it is changed
         gt_roidb = self.gt_roidb()
         ss_roidb = self._load_selective_search_roidb(gt_roidb)
+        print "The size of gt is {}".format(len(gt_roidb))
+        print "The size of ss is {}".format(len(ss_roidb))
+
         roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
-        #for i in xrange(roidb[53]['boxes'].shape[0]):
-        #    print roidb[53]['gt_classes'][i]
-        #    print roidb[53]['boxes'][i]
-        #print rsdasdoidb[i]
+
+        print "The ROIDB are all merged!"
 
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
@@ -195,14 +236,25 @@ class new_database(datasets.imdb):
     def _load_selective_search_roidb(self, gt_roidb):
         box_list = []
         # read data from each sub file
-        for i in xrange(len(self._type_classes)):
-            filename = os.path.abspath(os.path.join(datasets.ROOT_DIR, 'data',
-                                       self.name, self._stage, str(i + 1), 'boxes.mat'))
+        # use the image_index and image_type to clearify
+        for i in xrange(len(self._image_index)):
+            # getting the i th 
+            filename = os.path.join(self._data_path, self._stage,
+                    str(self._image_twentysix_type[i]), 'proposals', self._image_index[i][7:])
             assert os.path.exists(filename), \
-                'Selective search data not found at: {}'.format(filename)
-            raw_data = sio.loadmat(filename)['boxes'].ravel()
-            for x in xrange(raw_data.shape[0]):
-                box_list.append(raw_data[x][:, (1, 0, 3, 2)] - 1)
+                'Proposal box data not found at: {}'.format(filename)
+            
+            data = open(filename, "rb").read()
+            number_proposals = struct.unpack("i", data[0:4])[0]
+            number_edge = struct.unpack("i", data[4:8])[0]
+            
+            number_proposals = min(cfg.NUM_PPS, number_proposals)
+
+            raw_data = np.asarray(struct.unpack(str(number_proposals * 4) + 'f',data[8: 8 + 16 * number_proposals])).reshape(number_proposals, 4)
+
+            box_list.append(raw_data[:, :])
+        
+        print "The proposals are all loaded"
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
@@ -253,7 +305,9 @@ class new_database(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, self._stage, str(self._image_type[i]),
+        if i % 100 == 0: 
+            print "Now loading annotations of the {} th image".format(i)
+        filename = os.path.join(self._data_path, self._stage, str(self._image_twentysix_type[i]),
                                 'Label', self._image_label[i] + self._label_ext)
         # make sure the annotation is within the picture
         im = PIL.Image.open(self.image_path_at(i))
@@ -266,14 +320,9 @@ class new_database(datasets.imdb):
             data = minidom.parseString(f.read())
 
         type_objs = data.getElementsByTagName('clothClass')
-        texture_objs = data.getElementsByTagName('clothClass')
 
-        neckband_objs = data.getElementsByTagName('clothNeckband')
-        sleeve_objs = data.getElementsByTagName('clothSleeve')
-
+        # nType always = 1 here, which is the case of our dataset
         nType = 0 
-        nNeckband = 0 
-        nSleeve = 0 
 
         for ix, obj in enumerate(type_objs):
             # add type class and texture class simultaneously
@@ -281,21 +330,7 @@ class new_database(datasets.imdb):
             validation = location.getAttributeNode('SourceQuality').childNodes[0].data
             nType = nType + 1
 
-        for ix, obj in enumerate(neckband_objs):
-            # add type class and texture class simultaneously
-            location = obj.getElementsByTagName('Location')[0]
-            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
-            if validation == u'Valid':
-                nNeckband = nNeckband + 1
-	    
-        for ix, obj in enumerate(sleeve_objs):
-            # add type class and texture class simultaneously
-            location = obj.getElementsByTagName('Location')[0]
-            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
-            if validation == u'Valid':
-                nSleeve = nSleeve + 1
-
-        num_objs = nType + nSleeve + nNeckband
+        num_objs = nType
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
@@ -312,29 +347,31 @@ class new_database(datasets.imdb):
             
             validation = location.getAttributeNode('SourceQuality').childNodes[0].data
             if validation != u'Valid':
-                # continue  # this box is useless, continue
-                x1 = widths / 3.0
-                x2 = widths / 3.0 * 2.0
-                y1 = height / 3.0
-                y2 = height / 3.0 * 2.0
-    
-                cls = self._image_type[i]  # change the unicode into str
+                # this box is useless, error!
+                sys.exit("Error! An invalid tags find at {}".format(self.image_path_at(i)))
             else:
                 x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
                 y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
                 x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
                 y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
     
+                # make sure the coordinates are within the pic
                 x1 = min(x1, widths - 1)
                 x2 = min(x2, widths - 1)
                 y1 = min(y1, height - 1)
                 y2 = min(y2, height - 1)
     
+                # the class number of the proposals
                 cls_str = obj.getAttributeNode('type').childNodes[0].data
                 cls_str = cls_str.encode('utf-8')  # change the unicode into str
-    
-                cls = self._class_to_ind[cls_str]
-            # add type class
+
+                # 3 classes r 26 classes?
+                if cfg.ThreeClass == False:
+                    cls = self._ts_class_to_ind[cls_str]
+                else:
+                    cls = twentysix2three(self._ts_class_to_ind[cls_str])
+
+            # take out the possible label error of wrong orders
             if x1 > x2:
                 temp_value = x1
                 x1 = x2
@@ -343,100 +380,10 @@ class new_database(datasets.imdb):
                 temp_value = y1
                 y1 = y2
                 y2 = temp_value
+
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
-
-            # for the texture
-            if validation != u'Valid':
-                tex_cls_str = '其他纹'
-            else:
-                tex_cls_str = texture_objs[ix].getAttributeNode('type').childNodes[0].data
-                tex_cls_str = tex_cls_str.encode('utf-8')  # change the unicode into str
-
-            if tex_cls_str == '其他':
-                tex_cls_str = '其他纹'
-            tex_cls = self._class_to_ind[tex_cls_str]
-            # add texture class
-            #boxes[ix + dx, :] = [x1, y1, x2, y2]
-            #gt_classes[ix + dx] = tex_cls
-            #overlaps[ix + dx, tex_cls] = 1.0
-
-        # loading the object bounding box of the sleeve type and the neckband type
-        dx = nType
-        for ix, obj in enumerate(neckband_objs):
-            # Make pixel indexes 0-based
-            location = obj.getElementsByTagName('Location')[0]
-
-            x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
-            y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
-            x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
-            y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
-
-            x1 = min(x1, widths - 1)
-            x2 = min(x2, widths - 1)
-            y1 = min(y1, height - 1)
-            y2 = min(y2, height - 1)
-            # check for validation
-            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
-            if validation != u'Valid':
-                continue  # this box is useless, continue
-
-            cls_str = obj.getAttributeNode('type').childNodes[0].data
-            cls_str = cls_str.encode('utf-8')  # change the unicode into str
-			
-            if cls_str == '其他':  # we have to devide them!
-                cls_str = '其他领'
-            cls = self._class_to_ind[cls_str]
-
-            # add type class
-            if x1 > x2:
-                temp_value = x1
-                x1 = x2
-                x2 = temp_value
-            if y1 > y2:
-                temp_value = y1
-                y1 = y2
-                y2 = temp_value
-            boxes[ix + dx, :] = [x1, y1, x2, y2]
-            gt_classes[ix + dx] = cls
-            overlaps[ix + dx, cls] = 1.0
-
-        dx = nType + nNeckband
-        for ix, obj in enumerate(sleeve_objs):
-            # check for validation
-
-            # Make pixel indexes 0-based
-            location = obj.getElementsByTagName('Location')[0]
-            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
-            if validation != u'Valid':
-                continue  # this box is useless, continue
-
-            x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
-            y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
-            x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
-            y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
-
-            x1 = min(x1, widths - 1)
-            x2 = min(x2, widths - 1)
-            y1 = min(y1, height - 1)
-            y2 = min(y2, height - 1)
-            cls_str = obj.getAttributeNode('type').childNodes[0].data
-            cls_str = cls_str.encode('utf-8')  # change the unicode into str
-            cls = self._class_to_ind[cls_str]
-
-            # add type class
-            if x1 > x2:
-                temp_value = x1
-                x1 = x2
-                x2 = temp_value
-            if y1 > y2:
-                temp_value = y1
-                y1 = y2
-                y2 = temp_value
-            boxes[ix + dx, :] = [x1, y1, x2, y2]
-            gt_classes[ix + dx] = cls
-            overlaps[ix + dx, cls] = 1.0
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 

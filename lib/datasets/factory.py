@@ -58,7 +58,6 @@ def get_imdb(name):
         raise KeyError('Unknown dataset: {}'.format(name))
     return __sets[name]()
 
-
 def list_imdbs():
     """List all registered imdbs."""
     return __sets.keys()

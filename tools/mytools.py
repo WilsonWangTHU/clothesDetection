@@ -6,17 +6,20 @@
 # test some random pictures
 # ---------------------------------------
 
-import argparse
-import os
-import caffe
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
-
-import selective_search_ijcv_with_python as selective_search
+import _init_paths
+from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
 from utils.cython_nms import nms
-# import _init_paths
+from utils.timer import Timer
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io as sio
+import caffe, os, sys, cv2
+import argparse
+
+import selective_search_ijcv_with_python as selective_search
+
+
 
 ''' a dict for the net model to use '''
 NETS = {'vgg16': ('VGG16',
@@ -34,25 +37,35 @@ CLASSES = ('__background__',
 
 
 def getProposal(imageName):
-    obj_proposals = selective_search.get_windows(imageName)
+    obj_proposals = selective_search.get_windows({imageName})
     return obj_proposals
 
 
 def mytest(net, imageName):
     '''it is a simple test for one image'''
-    obj_proposals = getProposal(imageName)
+    # obj_proposals = getProposal(imageName)
+    obj_proposals = sio.loadmat('/home/wangtw/fast-rcnn/tools/testbox.mat')['boxes']
+    print("test")
+    print("test")
+    print(type(obj_proposals))
+    print("test")
+    print("test")
+    print("test")
     im = cv2.imread(imageName)
     scores, boxes = im_detect(net, im, obj_proposals)
 
     # visualizing
-    CONF_THRESH = 0.8
+    CONF_THRESH = 0.10
     NMS_THRESH = 0.3
 
     # change the order ?
     im = im[:, :, (2, 1, 0)]
     for cls in np.arange(len(CLASSES)):
+        if cls == 0:  # not necessary back ground
+            continue
         '''test the score on all the classes'''
 
+        print(('test for{}').format(CLASSES[cls]))
         cls_boxes = boxes[:, 4 * cls: 4 * (cls + 1)]  # get boxes
         cls_scores = scores[:, cls]
         # compute the nms results
@@ -63,26 +76,15 @@ def mytest(net, imageName):
 
         # plot if necessary
         indexs = np.where(dets[:, -1] >= CONF_THRESH)[0]
-        if indexs == 0:  # not necessary
+        if len(indexs) == 0:  # not necessary
             continue
-        fig, ax = plt.subplot(figsize=(12, 12))
+        fig, ax = plt.subplots(figsize=(12, 12))
         ax.imshow(im, aspect='equal')
         for i in indexs:
             bbox = dets[i, :4]
             score = dets[i, -1]
-
-            ax.add_patch(plt.Rectangle((bbox[0], bbox[1]),
-                                       bbox[2] - bbox[0],
-                                       bbox[3] - bbox[1],
-                                       fill=False,
-                                       edgecolor='red',
-                                       linewidth=3.5
-                                       )
-                         )
-        ax.text(bbox[0], bbox[1] - 2,
-                '{:s} {:.3f}'.format(CLASSES[cls], score),
-                bbox=dict(facecolor='blue', alpha=0.5),
-                fontsize=14, color='white')
+            ax.add_patch(plt.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3]-bbox[1], fill=False, edgecolor='red', linewidth=3.5))
+            ax.text(bbox[0], bbox[1] - 2, '{:s} {:.3f}'.format(CLASSES[cls], score),bbox=dict(facecolor='blue', alpha=0.5), fontsize=14, color='white') 
 
         ax.set_title(('{} detections with '
                       'p({} | box) >= {:.1f}').format(CLASSES[cls], CLASSES[cls], CONF_THRESH), fontsize=14)
@@ -114,7 +116,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    prototxt = os.path.join()('models', NETS[args.demo_net][0],
+    prototxt = os.path.join('models', NETS[args.demo_net][0],
                               'test.prototxt')
     caffemodel = os.path.join('data', 'fast_rcnn_models',
                               NETS[args.demo_net][1])
