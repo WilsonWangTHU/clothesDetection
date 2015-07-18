@@ -124,6 +124,7 @@ def _compute_targets(rois, overlaps, labels):
     gt_heights = gt_rois[:, 3] - gt_rois[:, 1] + cfg.EPS
     gt_ctr_x = gt_rois[:, 0] + 0.5 * gt_widths
     gt_ctr_y = gt_rois[:, 1] + 0.5 * gt_heights
+
     #print gt_heights
     #print ex_heights
     #raw_input()

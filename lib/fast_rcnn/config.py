@@ -68,7 +68,7 @@ __C.TRAIN.BBOX_REG = True
 __C.TRAIN.BBOX_THRESH = 0.5
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 10000
+__C.TRAIN.SNAPSHOT_ITERS = 1000
 
 # solver.prototxt specifies the snapshot path prefix, this adds an optional
 # infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
@@ -117,6 +117,11 @@ __C.DEDUP_BOXES = 1./16.
 # These are the values originally used for training VGG16
 __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
+# set this variable to false if we want 26 class
+__C.ThreeClass = True
+
+# the number of proposals tested
+__C.NUM_PPS = 2000
 # For reproducibility
 __C.RNG_SEED = 3
 
@@ -125,6 +130,7 @@ __C.EPS = 1e-14
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
+
 
 # The place of files to store the information of the new data base
 __C.DB_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..', 'data', 'DB_info'))

@@ -12,6 +12,7 @@ from utils.cython_bbox import bbox_overlaps
 import numpy as np
 import scipy.sparse
 import datasets
+from fast_rcnn.config import cfg
 
 class imdb(object):
     """Image database."""
@@ -38,6 +39,10 @@ class imdb(object):
     @property
     def classes(self):
         return self._classes
+
+    @property
+    def ts_classes(self):
+        return self._ts_classes
 
     @property
     def image_index(self):
@@ -104,13 +109,21 @@ class imdb(object):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
-            assert (boxes[:, 2] >= boxes[:, 0]).all()
+            if (boxes[:, 2] >= boxes[:, 0]).all() == False:
+                print np.where((boxes[:, 2] < boxes[:, 0]))
+                print self._image_index[i]
+                print oldx1[0:14]
+                print oldx2[0:14]
+                raw_input()
+            #assert (boxes[:, 2] >= boxes[:, 0]).all()
+            
             entry = {'boxes' : boxes,
                      'gt_overlaps' : self.roidb[i]['gt_overlaps'],
                      'gt_classes' : self.roidb[i]['gt_classes'],
                      'flipped' : True}
             self.roidb.append(entry)
         self._image_index = self._image_index * 2
+        self._image_twentysix_type = self._image_twentysix_type * 2
         self._image_type = self._image_type * 2
 
     def evaluate_recall(self, candidate_boxes, ar_thresh=0.5):
@@ -160,10 +173,11 @@ class imdb(object):
         roidb = []
         for i in xrange(self.num_images):
             boxes = box_list[i]
+            #if i % 100 == 0: 
+                #print boxes.shape
+                #print gt_roidb[i]['gt_classes']
             #print boxes
-            #print boxes.shape
             #print bosdasdxes.shape
-            #print gt_roidb[i]['gt_classes']
             num_boxes = boxes.shape[0]
             overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
 
@@ -191,15 +205,35 @@ class imdb(object):
 
     @staticmethod
     def merge_roidbs(a, b):
-        assert len(a) == len(b)
+        assert len(a) == len(b), "Really?"
+        print "Are we good?"
+        print len(a)
+        print len(b)
+        print "the length! fellows"
         for i in xrange(len(a)):
+            if i % 1000 == 0:
+                print "Ready to go?"
+                print a[i]['boxes'].shape
+                print b[i]['boxes'].shape
+                print a[i]['boxes'][0][0]
+                print 'gt class:'
+                print a[i]['gt_classes'].shape
+                print b[i]['gt_classes'].shape
+                print 'gt overlaps:'
+                print a[i]['gt_overlaps'].shape
+                print b[i]['gt_overlaps'].shape
+
+            assert a[i]['boxes'].shape[1] == b[i]['boxes'].shape[1], "boxes error! at {}".format(i)
+            assert a[i]['gt_overlaps'].shape[1] == b[i]['gt_overlaps'].shape[1], "gt_class overlaps! at {}".format(i)
+
             a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
             a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'],
                                             b[i]['gt_classes']))
             a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
                                                        b[i]['gt_overlaps']])
+        print "We are out of merge!"
         return a
-
+        
     def competition_mode(self, on):
         """Turn competition mode on or off."""
         pass
