@@ -29,13 +29,16 @@ def twentysix2three(class_type):
     if 1 <= class_type <= 7 \
             or 9 <= class_type <= 10 \
             or 12 <= class_type <= 19:
+        # 16 class 1 type
         out_number = 1
     else:
         if class_type == 8 \
                 or class_type == 11 \
                 or class_type == 20:
+            # three class 3 types
             out_number = 3
         else:
+            # 7 class 2 type
             out_number = 2
     return out_number
 
@@ -148,12 +151,24 @@ class new_database(datasets.imdb):
         image_type = []
         image_label = []
         image_twentysix_type = []
-        for class_type in xrange(1, len(self._type_classes) + 1):
+
+        class_list = list(xrange(1, len(self._type_classes) + 1))
+        if cfg.BALANCED == True:
+            # append more class three type to balance the datasets
+            # type 8, 11, 20 is the class three, add then to 12 types in all
+            append_list_8 = list(8 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+            append_list_11 = list(11 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+            append_list_20 = list(20 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+            class_list.extend(append_list_8)
+            class_list.extend(append_list_11)
+            class_list.extend(append_list_20)
+
+        for class_type in class_list:
             # the twenty six type is useful when loading the annotations
             image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
                                           'newGUIDMapping.txt')
             assert os.path.exists(image_set_file), \
-                'index txt does not exist: {}{}'.format(image_set_file)
+                'index txt does not exist: {}'.format(image_set_file)
             with open(image_set_file) as f:
                 for x in f.readlines():
                     # when using the three class, it is a different label way
@@ -185,7 +200,7 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self.name + '_3CL=' + str(__C.ThreeClass) + '_BLC=' + str(__C.BALANCED) + '_COF=' + str(__C.BALANCED) + '_TT1000' + str(__C.TESTTYPE1000) + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)

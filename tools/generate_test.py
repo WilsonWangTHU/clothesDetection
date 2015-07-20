@@ -14,18 +14,23 @@ from fast_rcnn.test import im_detect
 from utils.cython_nms import nms
 from utils.timer import Timer
 import numpy as np
-import scipy.io as sio
 import caffe, os, sys, cv2
 import argparse
-import xml.dom.minidom as minidom
 import struct
 
 
+font = cv2.FONT_HERSHEY_SIMPLEX
+
 num_category = 26
 num_class = 3
-root_dir = '/media/Elements/twwang/fast-rcnn/data/clothesDataset/test'
 
-top_number = 5
+Jingdong_root_dir = '/media/Elements/twwang/fast-rcnn/data/clothesDataset/test'
+Jingdong_output_dir = '/media/Elements/twwang/fast-rcnn/data/results/Jingdong'
+
+forever21_data_dir = '/media/Elements/twwang/fast-rcnn/data/CCP'
+forever21_output_dir = '/media/Elements/twwang/fast-rcnn/data/results/forever21'
+
+top_number = 10
 
 accuracy_perCls_top1 = np.zeros((num_category), dtype=np.float)
 accuracy_perCls_top5 = np.zeros((num_category), dtype=np.float)
@@ -34,7 +39,9 @@ accuracy_perCls_top1_box = np.zeros((num_category), dtype=np.float)
 accuracy_perCls_top5_box = np.zeros((num_category), dtype=np.float)
 
 pred_preCls = np.zeros((26, 26), dtype=np.float)
-CONF_THRESH = 0.4
+
+CONF_THRESH = 0.1
+PLOT_CONF_THRESH = 0.1
 NMS_THRESH = 0.3
 
 CLASSES = ('__background__', 'Upper', 'Lower', 'Whole')
@@ -62,7 +69,7 @@ def readcloth_proposals(image_name, category):
 
     # get the proposal files image by image 
     for i in xrange(0, len(image_name)):
-        proposal_files = os.path.join(root_dir, str(category), \
+        proposal_files = os.path.join(Jingdong_root_dir, str(category), \
                 "proposals", image_name[i])
         if not os.path.isfile(caffemodel):
             raise IOError()
@@ -90,28 +97,170 @@ def readcloth_proposals(image_name, category):
 
     return proposals
 
-def category_test(category, net):
+def fowever21test(net, args):
 
     # reading the file names in the mapping files
-    image_set_file = os.path.join(root_dir, str(category), 'newGUIDMapping.txt')
+    image_dir = os.path.join(forever21_data_dir, 'photos')
+    #proposal_dir = os.path.join(forever21_data_dir, 'proposals')
+
+    # get the image name
+    image_name = [f for f in os.listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f))]
+
+    # get the proposals
+    # Load image one by one
+    for i_image in xrange(0, len(image_name)):
+        image_file = os.path.join(forever21_data_dir, \
+                'photos', image_name[i_image])
+        proposal_file = os.path.join(forever21_data_dir, \
+                'proposals', 'proposals' + image_name[i_image])
+        
+        data = open(proposal_file, "r")
+        number_proposals = int(data.readline())
+        number_edge = int(data.readline())
+        number_proposals = min(cfg.NUM_PPS, number_proposals)
+        proposal_data = np.zeros((number_proposals, 4), dtype=np.float32)
+        
+        for i in xrange(number_proposals):
+            proposal_data[i, :] = np.float32(data.readline().strip().split())
+            
+        im = cv2.imread(image_file)
+
+        # Detect all object classes and regress object bounds
+        timer = Timer()
+        timer.tic()
+        scores, boxes = im_detect(net, im, proposal_data)
+        timer.toc()
+        print("The running time is {} on the {} th image".format(timer.total_time, i_image))
+        
+        # for each class, we go for a nms
+        for cls in xrange(1, num_class):
+            cls_ind = cls
+            cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
+            cls_scores = scores[:, cls_ind]
+            dets = np.hstack((cls_boxes,
+                cls_scores[:, np.newaxis])).astype(np.float32)
+            keep = nms(dets, NMS_THRESH)
+            dets = dets[keep, :]
+
+            # get the sorted results
+            inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
+            dets = dets[inds, :]
+            # get the data together
+            cls_line = np.ones((dets.shape[0], 1)) * cls
+
+            if cls == 1:
+                results = dets.astype(np.float32)
+                results_cls = cls_line.astype(np.int32)
+            else:
+                results = np.vstack((results, dets)).astype(np.float32)
+                results_cls = np.vstack((results_cls, cls_line)).astype(np.int32)
+
+        # sort the results
+        scores = results[:, 4]
+        order = scores.argsort()[::-1]
+        
+        results = results[order, :]
+        results_cls = results_cls[order, :]
+        
+        # now save the results, note that fowever 21's results are stored 1 
+        # file for 1 image, and the Jingdong results are stored 1 category for
+        # 1 image
+        floatwritter = open(os.path.join(
+            forever21_output_dir, image_name[i_image] + '_floatResults'), 'w')
+        intwritter = open(os.path.join(
+            forever21_output_dir, image_name[i_image] +'intResults'), 'w')
+
+        # write the dimension of the data, it will be be compatible with the 
+        # dbfeature tool used by the SenseTime
+        floatwritter.write(str(top_number) + '\n')
+        floatwritter.write(str(5) + '\n')
+        intwritter.write(str(top_number) + '\n')
+        intwritter.write(str(1) + '\n')
+
+        for i in xrange(0, top_number):
+            if i >= results.shape[0]:
+                floatwritter.write(str(-1) + ' ')
+                floatwritter.write(str(-1) + ' ')
+                floatwritter.write(str(-1) + ' ')
+                floatwritter.write(str(-1) + ' ')
+                floatwritter.write(str(-1) + ' ')
+                intwritter.write(str(-1) + ' ')
+            else:
+                floatwritter.write(str(results[i, 0]) + ' ')
+                floatwritter.write(str(results[i, 1]) + ' ')
+                floatwritter.write(str(results[i, 2]) + ' ')
+                floatwritter.write(str(results[i, 3]) + ' ')
+                floatwritter.write(str(results[i, 4]) + ' ')
+                intwritter.write(str(results_cls[i, 0]) + ' ')
+            intwritter.write('\n')
+            floatwritter.write('\n')
+
+        floatwritter.close();
+        intwritter.close();
+        
+        # whether to plot the result demo image?
+        if args.plot == False:
+            continue
+        for i in xrange(0, results.shape[0]):
+            if results[i, 4] < PLOT_CONF_THRESH:
+                continue
+            if results_cls[i, 0] == 1:
+                cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,255,0), 3)
+                cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                            ',P: ' + str(results[i, 4]),
+                            (results[i, 0], results[i, 1]),
+                            font, 1, (0,255,0), 2, 255)
+            else:
+                if results_cls[i, 0] == 2:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (255,0,0), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 1, (255,0,0), 2, 255)
+                else:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,0,255), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 1, (0,0,255), 2, 255)
+                        
+        cv2.imwrite(os.path.join(forever21_output_dir, \
+                'images', image_name[i_image]), im)
+        
+    return
+    
+    
+def category_test(category, net, args):
+
+    # reading the file names in the mapping files
+    image_set_file = os.path.join(Jingdong_root_dir, str(category), 'newGUIDMapping.txt')
     image_name = readcloth_name(image_set_file)
 
     # get the proposals
     image_proposal = readcloth_proposals(image_name, category)
 
     # get the writter
-    floatwritter = open(os.path.join(root_dir, str(category),
-                                     'result', 'floatResults'), 'w')
-    intwritter = open(os.path.join(root_dir, str(category),
-                                   'result', 'intResults'), 'w')
-    floatwritter.write(str(len(image_name)) + '\n')
-    floatwritter.write(str(5) + '\n')    
-    intwritter.write(str(len(image_name)) + '\n')
+    floatwritter = open(os.path.join(Jingdong_output_dir, 
+                                     str(category) + 'floatResults'), 'w')
+    intwritter = open(os.path.join(Jingdong_output_dir, 
+                                   str(category) + 'intResults'), 'w')
+    floatwritter.write(str(top_number * len(image_name)) + '\n')
+    floatwritter.write(str(5) + '\n')
+    intwritter.write(str(top_number * len(image_name)) + '\n')
     intwritter.write(str(1) + '\n')
 
     # Load image one by one
     for i_image in xrange(0, len(image_name)):
-        image_file = os.path.join(root_dir, \
+        image_file = os.path.join(Jingdong_root_dir, \
                 str(category), 'images', image_name[i_image])
         im = cv2.imread(image_file)
 
@@ -171,6 +320,45 @@ def category_test(category, net):
                 intwritter.write(str(results_cls[i, 0]) + ' ')
             intwritter.write('\n')
             floatwritter.write('\n')
+            
+        # plot the image if necessary        
+        if args.plot == False:
+            continue
+        for i in xrange(0, results.shape[0]):            
+            if results[i, 4] < PLOT_CONF_THRESH:
+                continue
+            if results_cls[i, 0] == 1:
+                cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,255,0), 3)
+                cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                            ',P: ' + str(results[i, 4]),
+                            (results[i, 0], results[i, 1]),
+                            font, 1, (0,255,0), 2, 255)
+            else:
+                if results_cls[i, 0] == 2:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (255,0,0), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 1, (255,0,0), 2, 255)
+                else:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,0,255), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 1, (0,0,255), 2, 255)
+                        
+        cv2.imwrite(os.path.join(Jingdong_output_dir, \
+                'images', str(category), image_name[i_image]), im)
+
 
     floatwritter.close();
     intwritter.close();
@@ -189,6 +377,10 @@ def parse_args():
         default='0')
     parser.add_argument('--prototxt', dest='prototxt', help='',
         default='0')
+    parser.add_argument('--testset', dest='dataset', help='',
+        default='forever21')
+    parser.add_argument('--plotImage', dest='plot', help='',
+        default='True')
 
     args = parser.parse_args()
 
@@ -219,5 +411,9 @@ if __name__ == '__main__':
     print('\n\nLoaded network {:s}'.format(caffemodel))
  
     # test for each category
-    for iNum in xrange(1, num_category+1):
-        category_test(iNum, net)
+    if args.dataset == 'Jingdong':
+        for iNum in xrange(1, num_category+1):
+            category_test(iNum, net, args)
+    if args.dataset == 'forever21':
+        fowever21test(net, args)
+        
