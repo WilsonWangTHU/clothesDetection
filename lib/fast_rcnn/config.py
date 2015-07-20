@@ -119,6 +119,9 @@ __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
+__C.BALANCED = True
+__C.BALANCED_COF = 3
+__C.TESTTYPE1000 = True
 
 # the number of proposals tested
 __C.NUM_PPS = 2000
@@ -144,7 +147,7 @@ def get_output_dir(imdb, net):
     A canonical path is built using the name from an imdb and a network
     (if not None).
     """
-    path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name))
+    path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name + '_3CL=' + str(__C.ThreeClass) + '_BLC=' + str(__C.BALANCED) + '_COF=' + str(__C.BALANCED) + '_TT1000' + str(__C.TESTTYPE1000)))
     if net is None:
         return path
     else:
