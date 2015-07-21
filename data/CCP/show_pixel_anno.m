@@ -2,7 +2,7 @@ function show_pixel_anno
 % SHOW_PIXEL_ANNO visualization of pixel-level annotations
 % Wei YANG 2014
 % platero.yang (at) gmail.com
-imname = '0006';
+imname = '0001';
 
 load('label_list', 'label_list'); % load label list
 load(['annotations/pixel-level/' imname '.mat'], 'groundtruth'); % load an pixel-level annotation
@@ -26,7 +26,7 @@ subplot(1, 3, 1);  imshow(im); hold on; title('Original');
 gt_image = zeros(size(groundtruth, 1), size(groundtruth, 2), 3);
 
 for labelidx = 1:length(cur_labels)
-    [rows cols] = find(groundtruth == cur_labels(labelidx));
+    [rows, cols] = find(groundtruth == cur_labels(labelidx));
     
     curcolor = colors(cur_labels(labelidx)+1, :);
     for i=1:length(rows)
