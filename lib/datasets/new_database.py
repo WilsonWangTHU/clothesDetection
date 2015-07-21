@@ -24,8 +24,16 @@ import sys
 
 ''' in this file, we try to enable new database to be used'''
 
+WHOLE_DEBUGER = {
+    8 : 1,
+    11 : 2,
+    20: 3
+}
 
 def twentysix2three(class_type):
+    if cfg.DEBUG_CLASS_WHOLE == True:
+        return WHOLE_DEBUGER[class_type]
+        
     if 1 <= class_type <= 7 \
             or 9 <= class_type <= 10 \
             or 12 <= class_type <= 19:
@@ -77,6 +85,8 @@ class new_database(datasets.imdb):
         # for the three class detection, 1 for upper, 2 for lower, and
         # three for clothes that covers the whole body
         self._classes = ('__background__', 'Upper', 'Lower', 'Whole')
+        if cfg.DEBUG_CLASS_WHOLE == True:
+            self._classes = ('__background__', '8', '11', '20', 'test')
 #        self._classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
 #                         '棉服/羽绒服', '小西装/短外套',
 #                         '西服', '夹克', '旗袍', '皮衣',
@@ -162,6 +172,8 @@ class new_database(datasets.imdb):
             class_list.extend(append_list_8)
             class_list.extend(append_list_11)
             class_list.extend(append_list_20)
+        if cfg.DEBUG_CLASS_WHOLE == True:
+            class_list = [8, 11, 20]
 
         for class_type in class_list:
             # the twenty six type is useful when loading the annotations
@@ -200,7 +212,7 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_3CL=' + str(__C.ThreeClass) + '_BLC=' + str(__C.BALANCED) + '_COF=' + str(__C.BALANCED) + '_TT1000' + str(__C.TESTTYPE1000) + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self.name + '_3CL=' + str(cfg.ThreeClass) + '_BLC=' + str(cfg.BALANCED) + '_COF=' + str(cfg.BALANCED_COF) + '_TT1000=' + str(cfg.TESTTYPE1000) + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
