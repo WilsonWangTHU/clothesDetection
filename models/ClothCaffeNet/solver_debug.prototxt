@@ -1,4 +1,4 @@
-train_net: "/media/Elements/twwang/fast-rcnn/models/ClothCaffeNet/train.prototxt"
+train_net: "/media/Elements/twwang/fast-rcnn/models/ClothCaffeNet/train_debug.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.1

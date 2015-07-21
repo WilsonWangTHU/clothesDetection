@@ -41,7 +41,7 @@ accuracy_perCls_top5_box = np.zeros((num_category), dtype=np.float)
 pred_preCls = np.zeros((26, 26), dtype=np.float)
 
 CONF_THRESH = 0.1
-PLOT_CONF_THRESH = 0.1
+PLOT_CONF_THRESH = 0.4
 NMS_THRESH = 0.3
 
 CLASSES = ('__background__', 'Upper', 'Lower', 'Whole')
@@ -168,7 +168,7 @@ def fowever21test(net, args):
         floatwritter = open(os.path.join(
             forever21_output_dir, image_name[i_image] + '_floatResults'), 'w')
         intwritter = open(os.path.join(
-            forever21_output_dir, image_name[i_image] +'intResults'), 'w')
+            forever21_output_dir, image_name[i_image] +'_intResults'), 'w')
 
         # write the dimension of the data, it will be be compatible with the 
         # dbfeature tool used by the SenseTime
@@ -272,7 +272,7 @@ def category_test(category, net, args):
         print("The running time is {} on the {} th image of categary {}".format(timer.total_time, i_image, category))
 
         # for each class, we go for a nms
-        for cls in xrange(1, num_class):
+        for cls in xrange(1, num_class + 1):
             cls_ind = cls
             cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
             cls_scores = scores[:, cls_ind]
@@ -412,7 +412,7 @@ if __name__ == '__main__':
  
     # test for each category
     if args.dataset == 'Jingdong':
-        for iNum in xrange(1, num_category+1):
+        for iNum in [8, 11, 20]:
             category_test(iNum, net, args)
     if args.dataset == 'forever21':
         fowever21test(net, args)

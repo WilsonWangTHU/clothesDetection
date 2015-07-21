@@ -27,7 +27,7 @@ NETS = {'vgg16': ('VGG16',
                            'vgg_cnn_m_1024_fast_rcnn_iter_40000.caffemodel'),
         'caffenet': ('CaffeNet',
                      'caffenet_fast_rcnn_iter_40000.caffemodel')}
-CLASSES = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
+CLASSES = ('__background__', '风衣', '毛呢大衣', '羊毛衫/ 羊绒衫',
                          '棉服/羽绒服', '小西装/短外套',
                          '西服', '夹克', '旗袍', '皮衣',
                          '皮草', '婚纱', '衬衫', 'T恤',
