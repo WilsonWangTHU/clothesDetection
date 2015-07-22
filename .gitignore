@@ -10,6 +10,7 @@ utils/*.so
 *.png
 *.pkl
 *.mat
+*.fig
 *.tar
 *.rar
 *.tz
@@ -18,3 +19,10 @@ utils/*.so
 *.swp
 *.bak
 *.bak2
+
+
+*.mexw64
+*.mexa64
+
+*jpg_floatResults
+*jpg_intResults
