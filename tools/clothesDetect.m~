@@ -1,0 +1,87 @@
+% ----------------------------------------------------------------------
+%   generate the test results of upper body and lower body by using the
+%   pose detector, the image set is the
+%   18.7.2015
+% ----------------------------------------------------------------------
+addpath visualization;
+if isunix()
+    addpath mex_unix;
+elseif ispc()
+    addpath mex_pc;
+end
+
+load('PARSE_model');
+
+% get the image name
+image_dir = '/media/Elements/twwang/fast-rcnn/data/CCP/photos';
+image_name = dir(image_dir);
+output_dir = '/media/Elements/twwang/fast-rcnn/data/CCP/results_pose';
+
+for i_Image = 1: 1: length(image_name)
+    
+    if i_Image <= 2
+        continue;
+    end
+    im = imread([image_dir '/' image_name(i_Image).name]);
+    im_size = size(im);
+    im = imresize(im, [180 180 / im_size(1) * im_size(2) ]);
+    
+    
+    % call detect function
+    tic;
+    boxes = detect_fast(im, model, min(model.thresh,-1));
+    
+    boxes = nms(boxes, .1); % nonmaximal suppression
+    figure('visible','off')
+    box_size = size(boxes);
+    if box_size(1) == 0
+        continue
+    end
+    showboxes(im, boxes(1,:),colorset); % show the best detection
+    
+    % get the upper body and lower body
+    upper = [3, 8, 9, 15, 20, 21];
+    lower = [10, 11, 12, 13, 14, 22, 23, 24, 25, 26];
+    
+    % upper body
+    xmin = 1000000;
+    ymin = 1000000;
+    xmax = 0;
+    ymax = 0;
+    for iBox = 1: 1: length(upper)
+        i = upper(iBox);
+        xmin = min(boxes(1, i * 4 - 3), xmin);
+        xmax = max(boxes(1, i * 4 - 1), xmax);
+        ymin = min(boxes(1, i * 4 - 2), ymin);
+        ymax = max(boxes(1, i * 4), ymax);
+    end
+    
+    rectangle('Position', [xmin ymin xmax-xmin ymax-ymin], 'LineWidth', 3, 'EdgeColor','g');
+    
+    % lower body
+    xmin = 1000000;
+    ymin = 1000000;
+    xmax = 0;
+    ymax = 0;
+    for iBox = 1: 1: length(lower)
+        i = lower(iBox);
+        xmin = min(boxes(1, i * 4 - 3), xmin);
+        xmax = max(boxes(1, i * 4 - 1), xmax);
+        ymin = min(boxes(1, i * 4 - 2), ymin);
+        ymax = max(boxes(1, i * 4), ymax);
+    end
+    
+    
+    rectangle('Position', [xmin ymin xmax-xmin ymax-ymin], 'LineWidth', 3, 'EdgeColor','b');
+    
+    % get the frame image
+    f=getframe(gca);
+    [X, map] = frame2im(f);
+    imwrite(X, [output_dir '/' image_name(i_Image).name])
+    close all;
+    
+    dettime = toc; % record cpu time
+    
+    fprintf('detection took %.1f seconds on %d th image %s\n', dettime, i_Image, image_name(i_Image).name);
+    
+end

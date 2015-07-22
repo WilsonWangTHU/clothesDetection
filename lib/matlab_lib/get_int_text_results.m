@@ -17,6 +17,6 @@ end
 result = zeros(proposal_num, dimention);
 for i = 1: 1: proposal_num
     tline = fgets(fileID);
-    result(i, :) = cell2mat(textscan(tline,'%d'));
+    result(i, :) = cell2mat(textscan(tline,'%d\n'));
 end
 fclose(fileID);
