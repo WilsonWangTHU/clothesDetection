@@ -37,7 +37,7 @@ def twentysix2three(class_type):
     if 1 <= class_type <= 7 \
             or 9 <= class_type <= 10 \
             or 12 <= class_type <= 19:
-        # 17 class 1 type
+        # 16 class 1 type
         out_number = 1
     else:
         if class_type == 8 \
