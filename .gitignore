@@ -26,3 +26,4 @@ utils/*.so
 
 *jpg_floatResults
 *jpg_intResults
+*.m~

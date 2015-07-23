@@ -45,7 +45,7 @@ for i_Image = 1: 1: length(image_list)
         fprintf('    Testing the %d th image in the test set\n', i_Image - 2)
     end
     % try to read the gt files, if not exsit, generate them
-    if exist([boundingbox_gt_dir '/' image_list(i_Image).name],'file') ~= 2
+    if exist([boundingbox_gt_dir '/' image_list(i_Image).name], 'file') ~= 2
         % load(image_annotation) % the variable: 'tags'
         pixel_file = [pix_annotation_dir '/' image_list(i_Image).name];
         
@@ -74,7 +74,7 @@ for i_Image = 1: 1: length(image_list)
     [sgl_number_gt, sgl_number_pst_detection, ...
         sgl_number_detection, sgl_number_recall] = ...
         precision_test([coordinates_u; coordinates_l1; coordinates_l2], ...
-        results, results_cls, cfd_threshhold, IOU_threshhold);
+        results, results_cls, cfd_threshhold, IOU_threshhold, 'forever21');
     number_gt = number_gt + sgl_number_gt;
     number_pst_detection = number_pst_detection + sgl_number_pst_detection;
     number_detection = number_detection + sgl_number_detection;

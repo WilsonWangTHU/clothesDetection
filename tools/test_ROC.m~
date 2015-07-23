@@ -18,7 +18,7 @@ forever21_datasets = false;
 method = 'fast-RCNN'; % 'pose'
 
 % some basic test parameters
-step_number = 50;
+step_number = 504l`;
 switch method
     case 'fast-RCNN',
         min_cfd = 0.60;
