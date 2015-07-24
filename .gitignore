@@ -23,6 +23,7 @@ utils/*.so
 
 *.mexw64
 *.mexa64
+*.pdf
 
 *jpg_floatResults
 *jpg_intResults

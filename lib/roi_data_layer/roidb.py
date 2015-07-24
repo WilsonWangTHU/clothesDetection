@@ -29,25 +29,13 @@ def prepare_roidb(imdb):
         max_classes = gt_overlaps.argmax(axis=1)
         roidb[i]['max_classes'] = max_classes
         roidb[i]['max_overlaps'] = max_overlaps
-        #print imdb.image_path_at(i)
-        #print roidb[i]['max_classes'][np.where(roidb[i]['max_overlaps']>0.6)]
-        #print roidb[i]['max_overlaps'][np.where(roidb[i]['max_overlaps']>0.6)]
-        boxes = imdb.roidb[i]['boxes'].copy()
-        #print boxes[0,:]
-        #print boxes[1,:]
-        #print boxes[2,:]
-        #print boxes[3,:]
-        #print boxes[4,:]
-        #if i%10 == 0:
-        #    raw_input()
+        
         # sanity checks
         # max overlap of 0 => class should be zero (background)
         zero_inds = np.where(max_overlaps == 0)[0]
         assert all(max_classes[zero_inds] == 0)
         # max overlap > 0 => class should not be zero (must be a fg class)
         nonzero_inds = np.where(max_overlaps > 0)[0]
-        boxes = imdb.roidb[i]['boxes'].copy()
-        #print np.where(max_classes[nonzero_inds] == 0)
         assert all(max_classes[nonzero_inds] != 0)
 
 def add_bbox_regression_targets(roidb):

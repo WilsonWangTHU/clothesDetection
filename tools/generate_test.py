@@ -412,7 +412,7 @@ if __name__ == '__main__':
  
     # test for each category
     if args.dataset == 'Jingdong':
-        for iNum in [8, 11, 20]:
+        for iNum in xrange(1, num_category+1):
             category_test(iNum, net, args)
     if args.dataset == 'forever21':
         fowever21test(net, args)
