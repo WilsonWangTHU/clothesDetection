@@ -106,6 +106,24 @@ __C.TEST.BBOX_REG = True
 # MISC
 #
 
+# now for the overall settings ---- by Tingwu Wang
+__C.MULTI_LABEL = True
+
+# set this variable to false if we want 26 class
+__C.ThreeClass = True
+
+# set BALANCED True if we want more duplicate data in the 
+# third calss
+__C.BALANCED = False
+__C.BALANCED_COF = 3
+
+# set this on if we want to debug the third class
+__C.DEBUG_CLASS_WHOLE = False
+
+# we may use 1000 as train set and 1000 as test set
+__C.TESTTYPE1000 = False
+
+
 # The mapping from image coordinates to feature map coordinates might cause
 # some boxes that are distinct in image space to become identical in feature
 # coordinates. If DEDUP_BOXES > 0, then DEDUP_BOXES is used as the scale factor
@@ -116,16 +134,6 @@ __C.DEDUP_BOXES = 1./16.
 # Pixel mean values (BGR order) as a (1, 1, 3) array
 # These are the values originally used for training VGG16
 __C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
-
-# set this variable to false if we want 26 class
-__C.ThreeClass = True
-
-__C.BALANCED = True
-__C.DEBUG_CLASS_WHOLE = True
-
-__C.BALANCED_COF = 3
-
-__C.TESTTYPE1000 = True
 
 # the number of proposals tested
 __C.NUM_PPS = 2000
@@ -151,10 +159,17 @@ def get_output_dir(imdb, net):
     A canonical path is built using the name from an imdb and a network
     (if not None).
     """
+    name_string = '_3CL=' + str(__C.ThreeClass) + \
+            '_MUL_LAB=' + str(__C.MULTI_LABEL)
+    if __C.BALANCED == True:
+        name_string = name_string + '_BLC=' + str(__C.BALANCED) + \
+                '_COF=' + str(__C.BALANCED)
+    if __C.TESTTYPE1000 == True:
+        name_string = name_string + '_TT1000=' + str(__C.TESTTYPE1000)
     if __C.DEBUG_CLASS_WHOLE == True:
-        path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name + '_3CL=' + str(__C.ThreeClass) + '_BLC=' + str(__C.BALANCED) + '_COF=' + str(__C.BALANCED) + '_TT1000=' + str(__C.TESTTYPE1000) + '_DEBUG'))
-    else:
-        path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name + '_3CL=' + str(__C.ThreeClass) + '_BLC=' + str(__C.BALANCED) + '_COF=' + str(__C.BALANCED) + '_TT1000=' + str(__C.TESTTYPE1000)))
+        name_string = name_string + '_DEBUG=' + str(__C.DEBUG_CLASS_WHOLE)
+
+    path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name + name_string))
     if net is None:
         return path
     else:

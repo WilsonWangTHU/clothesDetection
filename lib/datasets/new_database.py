@@ -1,9 +1,13 @@
 #coding=utf-8
 # --------------------------------------------------------
-# Fast R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
+# Fast rcnn clothes detector
+# Written by Tingwu Wang, from 1, 5, 2015, i.e. the 
+# internship SenseTime, Beijing
+#
+#   The original fast-rcnn detector is under the 
+#   copyright 2015 Microsoft
+#   Licensed under The MIT License 
+#   Written by Ross Girshick
 # --------------------------------------------------------
 from math import floor
 import datasets
@@ -23,8 +27,8 @@ from fast_rcnn.config import cfg
 import sys
 
 ''' in this file, we try to enable new database to be used'''
-
-WHOLE_DEBUGER = {
+# this is a debuger to make sure the third class is working
+WHOLE_DEBUGER = { 
     8 : 1,
     11 : 2,
     20: 3
@@ -62,6 +66,8 @@ class new_database(datasets.imdb):
         # eg: /fast-rcnn/data/clothesDatabase/2015clothes
         self._data_path = os.path.join(self._devkit_path, db_name)
         self._stage = stage
+
+        # the class type variables
         self._type_classes = ('风衣', '毛呢大衣', '羊毛衫/羊绒衫',
                               '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
@@ -81,27 +87,6 @@ class new_database(datasets.imdb):
                                   '连帽领', '其他领'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
-
-        # for the three class detection, 1 for upper, 2 for lower, and
-        # three for clothes that covers the whole body
-        self._classes = ('__background__', 'Upper', 'Lower', 'Whole')
-        if cfg.DEBUG_CLASS_WHOLE == True:
-            self._classes = ('__background__', '8', '11', '20', 'test')
-#        self._classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
-#                         '棉服/羽绒服', '小西装/短外套',
-#                         '西服', '夹克', '旗袍', '皮衣',
-#                         '皮草', '婚纱', '衬衫', 'T恤',
-#                         'Polo衫', '开衫', '马甲', '男女背心及吊带',
-#                         '卫衣', '雪纺衫', '连衣裙', '半身裙',
-#                         '打底裤', '休闲裤', '牛仔裤', '短裤',
-#                         '卫裤/运动裤', '一致色', '横条纹',
-#                         '纵条纹', '其他条纹', '豹纹斑马纹',
-#                         '格子', '圆点', '乱花', 'LOGO及印花图案',
-#                         '其他纹', '圆领', 'V领', '翻领', '立领',
-#                         '高领', '围巾领', '一字领', '大翻领西装领',
-#                         '连帽领', '其他领', '短袖', '中袖', '长袖'
-#                         )
-
         self._ts_classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
                               '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
@@ -111,16 +96,38 @@ class new_database(datasets.imdb):
                               '打底裤', '休闲裤', '牛仔裤', '短裤',
                               '卫裤/运动裤'
                               )
-        self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
-        self._ts_class_to_ind = dict(zip(self._ts_classes, xrange(len(self._ts_classes))))
+        # for the three class detection, 1 for upper, 2 for lower, and
+        # three for clothes that covers the whole body
+        if cfg.ThreeClass == True:
+            self._classes = ('__background__', 'Upper', 'Lower', 'Whole')
+            if cfg.DEBUG_CLASS_WHOLE == True:
+                self._classes = ('__background__', '8', '11', '20', 'test')
+        else:
+            self._classes = self._ts_classes
+
+
+
+        # the index files to map the name of the class to the numbers
+        self._class_to_ind = \
+                dict(zip(self._classes, xrange(len(self._classes))))
+        self._ts_class_to_ind = \
+                dict(zip(self._ts_classes, xrange(len(self._ts_classes))))
+
+
+        # the name of the label file extension
         self._label_ext = '.clothInfo'
+        self._len_sleeve_cls = len(self._sleeve_classes)
+        self._len_texture_cls = len(self._texture_classes)
+        self._len_neckband_cls = len(self._neckband_classes)
 
         # the name of the image, the type of the image, and the name of its
         # label file
         self._image_index, self._image_type, self._image_label, \
-                self._image_twentysix_type = self._load_image_set_index()
-        # Default to roidb handler
-        self._roidb_handler = self.selective_search_roidb  # it is a function
+                self._image_twentysix_type, \
+                = self._load_image_set_index()
+
+        # Default to roidb handler, it is no more useful now
+        self._roidb_handler = self.selective_search_roidb  
 
         # specific config options
         self.config = {'cleanup': True,
@@ -212,7 +219,12 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_3CL=' + str(cfg.ThreeClass) + '_BLC=' + str(cfg.BALANCED) + '_COF=' + str(cfg.BALANCED_COF) + '_TT1000=' + str(cfg.TESTTYPE1000) + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, \
+                self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_BLC=' + str(cfg.BALANCED) + \
+                '_COF=' + str(cfg.BALANCED_COF) + \
+                '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
@@ -235,8 +247,12 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path,
-                                  self.name + '_selective_search_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, \
+                self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_BLC=' + str(cfg.BALANCED) + \
+                '_COF=' + str(cfg.BALANCED_COF) + \
+                '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_roidb.pkl')
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
@@ -244,15 +260,14 @@ class new_database(datasets.imdb):
             print '{} ss roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        # it is changed
+        # it is changed, as we are not loading the selective search
+        # any more, we used the pre-computed Edge box, it's faster
         gt_roidb = self.gt_roidb()
         ss_roidb = self._load_selective_search_roidb(gt_roidb)
-        print "The size of gt is {}".format(len(gt_roidb))
-        print "The size of ss is {}".format(len(ss_roidb))
 
         roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
 
-        print "The ROIDB are all merged!"
+        print("The ROIDB are all loaded and merged with the gt!")
 
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
@@ -262,8 +277,8 @@ class new_database(datasets.imdb):
 
     def _load_selective_search_roidb(self, gt_roidb):
         box_list = []
-        # read data from each sub file
-        # use the image_index and image_type to clearify
+        # read data from each sub file, the _image_twentysix_type is 
+        # important to clearify the sub directory
         for i in xrange(len(self._image_index)):
             # getting the i th 
             filename = os.path.join(self._data_path, self._stage,
@@ -281,7 +296,7 @@ class new_database(datasets.imdb):
 
             box_list.append(raw_data[:, :])
         
-        print "The proposals are all loaded"
+        print("The proposals are all loaded")
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
