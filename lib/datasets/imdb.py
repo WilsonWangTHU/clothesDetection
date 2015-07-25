@@ -23,10 +23,15 @@ class imdb(object):
         self._classes = []
         self._image_index = []
         self._obj_proposer = 'selective_search'
+        self._len_label = 0
         self._roidb = None
         self._roidb_handler = self.default_roidb
         # Use this dict for storing dataset specific config options
         self.config = {}
+
+    @property
+    def len_label(self):
+        return self._len_label
 
     @property
     def name(self):
@@ -100,7 +105,8 @@ class imdb(object):
         num_images = self.num_images
         # I find something big! the PIL open has mistake!,making 
 		# width = 349
-        #widths = [PIL.Image.open(self.image_path_at(i)).size[0] for i in xrange(num_images)]
+        # widths = [PIL.Image.open(self.image_path_at(i)).\
+        # size[0] for i in xrange(num_images)]
         widths = [350 for i in xrange(num_images)]
         for i in xrange(num_images):
             boxes = self.roidb[i]['boxes'].copy()
@@ -109,19 +115,23 @@ class imdb(object):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
-            if (boxes[:, 2] >= boxes[:, 0]).all() == False:
-                print np.where((boxes[:, 2] < boxes[:, 0]))
-                print self._image_index[i]
-                print oldx1[0:14]
-                print oldx2[0:14]
-                raw_input()
-            #assert (boxes[:, 2] >= boxes[:, 0]).all()
+            assert (boxes[:, 2] >= boxes[:, 0]).all(), \
+                    "The box size and width is not matched"
             
-            entry = {'boxes' : boxes,
-                     'gt_overlaps' : self.roidb[i]['gt_overlaps'],
-                     'gt_classes' : self.roidb[i]['gt_classes'],
-                     'flipped' : True}
+            if cfg.MULTI_LABEL == True:
+                entry = {'boxes' : boxes,
+                        'gt_overlaps' : self.roidb[i]['gt_overlaps'],
+                        'gt_classes' : self.roidb[i]['gt_classes'],
+                        'flipped' : True,
+                        'multi_label' : self.roidb[i]['multi_label']}
+            else:
+                entry = {'boxes' : boxes,
+                        'gt_overlaps' : self.roidb[i]['gt_overlaps'],
+                        'gt_classes' : self.roidb[i]['gt_classes'],
+                        'flipped' : True}
             self.roidb.append(entry)
+
+        # edit the needed index and type variables
         self._image_index = self._image_index * 2
         self._image_twentysix_type = self._image_twentysix_type * 2
         self._image_type = self._image_type * 2
@@ -173,65 +183,65 @@ class imdb(object):
         roidb = []
         for i in xrange(self.num_images):
             boxes = box_list[i]
-            #if i % 100 == 0: 
-                #print boxes.shape
-                #print gt_roidb[i]['gt_classes']
-            #print boxes
-            #print bosdasdxes.shape
-            num_boxes = boxes.shape[0]
-            overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
+            num_boxes = boxes.shape[0]  # this is important
+            overlaps = np.zeros((num_boxes, self.num_classes),
+                    dtype=np.float32)
+            if cfg.MULTI_LABEL == True:
+                multi_label = np.zeros((num_boxes, self.len_label),
+                        dtype=np.int32)
 
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
                 gt_overlaps = bbox_overlaps(boxes.astype(np.float),
                                             gt_boxes.astype(np.float))
+
                 argmaxes = gt_overlaps.argmax(axis=1)
                 maxes = gt_overlaps.max(axis=1)
                 I = np.where(maxes > 0)[0]
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
+                if cfg.MULTI_LABEL == True:
+                    multi_label[I, :] = gt_roidb[i]['multi_label']
 
-                #print maxes
-                #for i in xrange(len(maxes)):
-                #    print maxes[i]
-                #print bsdsadoxes
             overlaps = scipy.sparse.csr_matrix(overlaps)
-            roidb.append({'boxes' : boxes,
-                          'gt_classes' : np.zeros((num_boxes,),
-                                                  dtype=np.int32),
-                          'gt_overlaps' : overlaps,
-                          'flipped' : False})
+            if cfg.MULTI_LABEL == False:
+                roidb.append({'boxes' : boxes,
+                              'gt_classes' : np.zeros((num_boxes,), dtype=np.int32),
+                              'gt_overlaps' : overlaps,
+                              'flipped' : False})
+            else:
+                roidb.append({'boxes' : boxes,
+                              'gt_classes' : np.zeros((num_boxes,), dtype=np.int32),
+                              'gt_overlaps' : overlaps,
+                              'flipped' : False,
+                              'multi_label' : multi_label})
         return roidb
 
     @staticmethod
     def merge_roidbs(a, b):
-        assert len(a) == len(b), "Really?"
-        print "Are we good?"
-        print len(a)
-        print len(b)
-        print "the length! fellows"
+        assert len(a) == len(b), \
+                "The size of the gt and the fg/bg boxes are not matched?"
+        print('The size of the gt is {}'.format(len(a)))
+        print('The size of the boxes is {}'.format(len(b)))
         for i in xrange(len(a)):
             if i % 1000 == 0:
-                print "Ready to go?"
-                print a[i]['boxes'].shape
-                print b[i]['boxes'].shape
-                print a[i]['boxes'][0][0]
-                print 'gt class:'
-                print a[i]['gt_classes'].shape
-                print b[i]['gt_classes'].shape
-                print 'gt overlaps:'
-                print a[i]['gt_overlaps'].shape
-                print b[i]['gt_overlaps'].shape
+                print('Merging the {} th image gt and boxes')
 
-            assert a[i]['boxes'].shape[1] == b[i]['boxes'].shape[1], "boxes error! at {}".format(i)
-            assert a[i]['gt_overlaps'].shape[1] == b[i]['gt_overlaps'].shape[1], "gt_class overlaps! at {}".format(i)
+            assert a[i]['boxes'].shape[1] == b[i]['boxes'].shape[1], \
+                    "Boxes size not matched! error! at {}".format(i)
+            assert a[i]['gt_overlaps'].shape[1] == \
+                    b[i]['gt_overlaps'].shape[1], \
+                    "gt_overlaps sizes are not matched at {}".format(i)
 
             a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
             a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'],
                                             b[i]['gt_classes']))
             a[i]['gt_overlaps'] = scipy.sparse.vstack([a[i]['gt_overlaps'],
                                                        b[i]['gt_overlaps']])
-        print "We are out of merge!"
+            if cfg.MULTI_LABEL == True:
+                a[i]['multi_label'] = \
+                        np.vstack((a[i]['multi_label'], b[i]['multi_label']))
+        print("We finished the merging task of gt and boxes!")
         return a
         
     def competition_mode(self, on):

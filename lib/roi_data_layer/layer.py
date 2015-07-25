@@ -72,6 +72,7 @@ class RoIDataLayer(caffe.Layer):
         layer_params = yaml.load(self.param_str_)
 
         self._num_classes = layer_params['num_classes']
+        # it is a place to consider!!! self._len_label= layer_params['num_classes']
 
         self._name_to_top_map = {
             'data': 0,
@@ -102,6 +103,10 @@ class RoIDataLayer(caffe.Layer):
             # bbox_loss_weights blob: At most 4 targets per roi are active;
             # thisbinary vector sepcifies the subset of active targets
             top[4].reshape(1, self._num_classes * 4)
+        if cfg.MULTI_LABEL == True:
+            self._name_to_top_map['multi_label'] = 5
+            top[5].reshape(1, self.len_label)
+
 
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
