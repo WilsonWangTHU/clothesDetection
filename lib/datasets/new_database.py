@@ -57,13 +57,13 @@ def twentysix2three(class_type):
 class new_database(datasets.imdb):
 
     def __init__(self, db_name, stage, devkit_path=None):
-        datasets.imdb.__init__(self, db_name)  # it is simply the name of db, no real data
+        datasets.imdb.__init__(self, db_name)
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
 
-        # different databases is under the directory of
-        # os.path.join(datasets.ROOT_DIR, 'data', 'clothesDatabase')
-        # eg: /fast-rcnn/data/clothesDatabase/2015clothes
+        # different databases is under the directory of os.path.join(
+        # datasets.ROOT_DIR, 'data', 'clothesDatabase') eg: 
+        # /fast-rcnn/data/clothesDatabase/2015clothes
         self._data_path = os.path.join(self._devkit_path, db_name)
         self._stage = stage
 
@@ -79,12 +79,12 @@ class new_database(datasets.imdb):
                               )
         self._texture_classes = ('一致色', '横条纹', '纵条纹',
                                  '其他条纹', '豹纹斑马纹', '格子',
-                                 '圆点', '乱花', 'LOGO及印花图案', '其他纹'
+                                 '圆点', '乱花', 'LOGO及印花图案', '其他'
                                  )
         self._neckband_classes = ('圆领', 'V领', '翻领',
                                   '立领', '高领', '围巾领',
                                   '一字领', '大翻领西装领',
-                                  '连帽领', '其他领'
+                                  '连帽领', '其他'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
         self._ts_classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
@@ -107,21 +107,36 @@ class new_database(datasets.imdb):
 
 
 
-        # the index files to map the name of the class to the numbers
-        self._class_to_ind = \
-                dict(zip(self._classes, xrange(len(self._classes))))
-        self._ts_class_to_ind = \
-                dict(zip(self._ts_classes, xrange(len(self._ts_classes))))
-
-
         # the name of the label file extension
         self._label_ext = '.clothInfo'
         self._len_sleeve_cls = len(self._sleeve_classes)
         self._len_texture_cls = len(self._texture_classes)
         self._len_neckband_cls = len(self._neckband_classes)
+        self._len_label = self._len_sleeve_cls + self._len_neckband_cls + \
+                self._len_texture_cls
 
-        # the name of the image, the type of the image, and the name of its
-        # label file
+        # the index files to map the name of the class to the numbers
+        self._class_to_ind = \
+                dict(zip(self._classes, xrange(len(self._classes))))
+        self._ts_class_to_ind = \
+                dict(zip(self._ts_classes, xrange(len(self._ts_classes))))
+        self._texture_to_label_ind = \
+                dict(zip(self._texture_classes,
+                    xrange(self._len_texture_cls)))
+        self._neckband_to_label_ind = \
+                dict(zip(self._neckband_classes,
+                    xrange(self._len_texture_cls,
+                        self._len_texture_cls + self._len_neckband_cls)
+                    ))
+        self._sleeve_to_label_ind = \
+                dict(zip(self._sleeve_classes,
+                    xrange(self._len_texture_cls + self._len_neckband_cls,
+                        self._len_label)   
+                    ))
+
+
+        # the name of the image, the type of the image, and the 
+        # name of its label file
         self._image_index, self._image_type, self._image_label, \
                 self._image_twentysix_type, \
                 = self._load_image_set_index()
@@ -149,9 +164,10 @@ class new_database(datasets.imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        # print "the index: {}, the type: {}".format(len(self._image_index), len(self._image_twentysix_type))
-        image_path = os.path.join(self._data_path, self._stage, str(self._image_twentysix_type[i]),
-                                  str(self._image_index[i]))
+        image_path = os.path.join(
+                self._data_path, self._stage,
+                str(self._image_twentysix_type[i]),
+                str(self._image_index[i]))
         assert os.path.exists(image_path), \
             'image file does not exist: {}{}'.format(image_path, i)
         return image_path
@@ -280,9 +296,11 @@ class new_database(datasets.imdb):
         # read data from each sub file, the _image_twentysix_type is 
         # important to clearify the sub directory
         for i in xrange(len(self._image_index)):
-            # getting the i th 
-            filename = os.path.join(self._data_path, self._stage,
-                    str(self._image_twentysix_type[i]), 'proposals', self._image_index[i][7:])
+            # the first 7 char of index is the 'images\' take it out
+            filename = os.path.join(
+                    self._data_path, self._stage,
+                    str(self._image_twentysix_type[i]),
+                    'proposals', self._image_index[i][7:])
             assert os.path.exists(filename), \
                 'Proposal box data not found at: {}'.format(filename)
             
@@ -347,14 +365,20 @@ class new_database(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        if i % 100 == 0: 
-            print "Now loading annotations of the {} th image".format(i)
-        filename = os.path.join(self._data_path, self._stage, str(self._image_twentysix_type[i]),
-                                'Label', self._image_label[i] + self._label_ext)
-        # make sure the annotation is within the picture
+        if i % 1000 == 0: 
+            print("Now loading annotations of the {} th image".format(i))
+        filename = os.path.join(
+                self._data_path, self._stage,
+                str(self._image_twentysix_type[i]),
+                'Label',
+                self._image_label[i] + self._label_ext)
+        # read the width and height of the image make sure the annotation
+        # is within the picture
         im = PIL.Image.open(self.image_path_at(i))
         widths = im.size[0]
         height = im.size[1]
+
+        # a useless function, it is out of service
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
@@ -364,26 +388,19 @@ class new_database(datasets.imdb):
         type_objs = data.getElementsByTagName('clothClass')
 
         # nType always = 1 here, which is the case of our dataset
-        nType = 0 
-
-        for ix, obj in enumerate(type_objs):
-            # add type class and texture class simultaneously
-            location = obj.getElementsByTagName('Location')[0]
-            validation = location.getAttributeNode('SourceQuality').childNodes[0].data
-            nType = nType + 1
-
-        num_objs = nType
+        num_objs = 1
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+        if cfg.MULTI_LABEL == True:
+            multi_label = \
+                    np.zeros((num_objs, self._len_label), dtype=np.int32)
 
-        # Load object bounding boxes into a data frame.
-        # first we load the type class and the texture class
+        # Load object bounding boxes into a data frame. first we load the
+        # type class and the texture class
         for ix, obj in enumerate(type_objs):
             # add type class and texture class simultaneously
-            dx = nType
-
             # Make pixel indexes 0-based
             location = obj.getElementsByTagName('Location')[0]
             
@@ -429,10 +446,43 @@ class new_database(datasets.imdb):
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
+        if cfg.MULTI_LABEL == False:
+            return {'boxes': boxes,
+                    'gt_classes': gt_classes,
+                    'gt_overlaps': overlaps,
+                    'flipped': False}
+
+        # now get the label information if we use the multi-label
+        type_objs = data.getElementsByTagName('clothTexture')
+        if len(type_objs) != 0:
+            label_type = type_objs[0]
+            label_cls = \
+                    label_type.getAttributeNode('type').childNodes[0].data
+            label_cls = label_cls.encode('utf-8')
+            multi_label[label_cls] = 1;
+        
+        # we dont consider one cloth with two different kinds of 
+        type_objs = data.getElementsByTagName('clothNeckband')
+        if len(type_objs) != 0:
+            label_type = type_objs[0]
+            label_cls = \
+                    label_type.getAttributeNode('type').childNodes[0].data
+            label_cls = label_cls.encode('utf-8')
+            multi_label[label_cls] = 1;
+
+        type_objs = data.getElementsByTagName('clothSleeve')
+        if len(type_objs) != 0:
+            label_type = type_objs[0]
+            label_cls = \
+                    label_type.getAttributeNode('type').childNodes[0].data
+            label_cls = label_cls.encode('utf-8')
+            multi_label[label_cls] = 1;
+
         return {'boxes': boxes,
                 'gt_classes': gt_classes,
                 'gt_overlaps': overlaps,
-                'flipped': False}
+                'flipped': False,
+                'multi_label': multi_label}
 
     def _write_voc_results_file(self, all_boxes):
         use_salt = self.config['use_salt']
