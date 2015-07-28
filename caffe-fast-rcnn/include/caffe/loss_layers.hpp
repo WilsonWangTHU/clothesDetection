@@ -88,6 +88,36 @@ class AccuracyLayer : public Layer<Dtype> {
   int ignore_label_;
 };
 
+/* MultiLabelAccuracyLayer
+  Note: not an actual loss layer! Does not implement backwards step.
+  Computes the accuracy of a with respect to b.
+*/
+template <typename Dtype>
+class MultiLabelAccuracyLayer : public Layer<Dtype> {
+ public:
+  explicit MultiLabelAccuracyLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual void SetUp(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+
+  // Modified by Ziwei, 20150723
+  // virtual inline LayerParameter_LayerType type() const {
+  //   return LayerParameter_LayerType_MULTI_LABEL_ACCURACY;
+  // }
+  virtual inline const char* type() const { return "MultiLabelAccuracy"; }
+
+  virtual inline int ExactNumBottomBlobs() const { return 2; }
+  virtual inline int ExactNumTopBlobs() const { return 1; }
+
+ protected:
+  virtual Dtype Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      vector<Blob<Dtype>*>* top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom) {
+    NOT_IMPLEMENTED;
+  }
+};
+
 /**
  * @brief An interface for Layer%s that take two Blob%s as input -- usually
  *        (1) predictions and (2) ground-truth labels -- and output a
@@ -763,6 +793,52 @@ class SoftmaxWithLossLayer : public LossLayer<Dtype> {
   bool normalize_;
 
   int softmax_axis_, outer_num_, inner_num_;
+};
+
+/* MultiLabelLossLayer, now it only computes Sigmoid Loss,
+but could be extended to use HingeLoss
+*/
+template <typename Dtype>
+class MultiLabelLossLayer : public LossLayer<Dtype> {
+ public:
+  explicit MultiLabelLossLayer(const LayerParameter& param)
+      : LossLayer<Dtype>(param),
+          sigmoid_layer_(new SigmoidLayer<Dtype>(param)),
+          sigmoid_output_(new Blob<Dtype>()) {}
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+
+  // virtual inline LayerParameter_LayerType type() const {
+  //   return LayerParameter_LayerType_MULTI_LABEL_LOSS;
+  // }
+  virtual inline const char* type() const { return "MultiLabelLoss"; }
+
+  virtual inline int MaxTopBlobs() const { return 2; }
+
+  // We cannot backpropagate to the labels; ignore force_backward for these
+  // inputs.
+  virtual inline bool AllowForceBackward(const int bottom_index) const {
+    return bottom_index != 1;
+  }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+
+  shared_ptr<SigmoidLayer<Dtype> > sigmoid_layer_;
+  // sigmoid_output stores the output of the sigmoid layer.
+  shared_ptr<Blob<Dtype> > sigmoid_output_;
+  // Vector holders to call the underlying sigmoid layer forward and backward.
+  vector<Blob<Dtype>*> sigmoid_bottom_vec_;
+  vector<Blob<Dtype>*> sigmoid_top_vec_;
 };
 
 }  // namespace caffe

@@ -237,6 +237,7 @@ class new_database(datasets.imdb):
         """
         cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
                 '_BLC=' + str(cfg.BALANCED) + \
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \
@@ -265,6 +266,7 @@ class new_database(datasets.imdb):
         """
         cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
                 '_BLC=' + str(cfg.BALANCED) + \
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \
@@ -365,7 +367,7 @@ class new_database(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        if i % 1000 == 0: 
+        if i % 100 == 0: 
             print("Now loading annotations of the {} th image".format(i))
         filename = os.path.join(
                 self._data_path, self._stage,
@@ -459,7 +461,9 @@ class new_database(datasets.imdb):
             label_cls = \
                     label_type.getAttributeNode('type').childNodes[0].data
             label_cls = label_cls.encode('utf-8')
-            multi_label[label_cls] = 1;
+            if self._texture_to_label_ind.has_key(label_cls):
+                label_cls = self._texture_to_label_ind[label_cls]
+                multi_label[0, label_cls] = 1;
         
         # we dont consider one cloth with two different kinds of 
         type_objs = data.getElementsByTagName('clothNeckband')
@@ -468,7 +472,9 @@ class new_database(datasets.imdb):
             label_cls = \
                     label_type.getAttributeNode('type').childNodes[0].data
             label_cls = label_cls.encode('utf-8')
-            multi_label[label_cls] = 1;
+            if self._neckband_to_label_ind.has_key(label_cls):
+                label_cls = self._neckband_to_label_ind[label_cls]
+                multi_label[0, label_cls] = 1;
 
         type_objs = data.getElementsByTagName('clothSleeve')
         if len(type_objs) != 0:
@@ -476,7 +482,9 @@ class new_database(datasets.imdb):
             label_cls = \
                     label_type.getAttributeNode('type').childNodes[0].data
             label_cls = label_cls.encode('utf-8')
-            multi_label[label_cls] = 1;
+            if self._sleeve_to_label_ind.has_key(label_cls):
+                label_cls = self._sleeve_to_label_ind[label_cls]
+                multi_label[0, label_cls] = 1;
 
         return {'boxes': boxes,
                 'gt_classes': gt_classes,
