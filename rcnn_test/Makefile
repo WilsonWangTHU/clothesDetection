@@ -9,7 +9,7 @@ OBJ_DIR := obj
 LIB_DIR := lib
 BIN_DIR := bin
 
-CXXFLAGS := -Wall -g -std=c++11
+CXXFLAGS := -Wall -g -std=c++11 
 CXXFLAGS += -I$(INCLUDE_DIR) -I../caffe-fast-rcnn/include \
 	    -I../caffe-fast-rcnn/build/src \
 	    -I/usr/local/cuda-6.5/include
