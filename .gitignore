@@ -1,4 +1,6 @@
 *.pyc
+*.bak
+*.mexmaci64
 .ipynb_checkpoints
 utils/*.c
 utils/*.so

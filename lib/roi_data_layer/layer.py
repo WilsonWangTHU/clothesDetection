@@ -109,7 +109,13 @@ class RoIDataLayer(caffe.Layer):
             top[4].reshape(1, self._num_classes * 4)
         if cfg.MULTI_LABEL == True:
             self._name_to_top_map['multi_label'] = 5
-            top[5].reshape(1, self.len_label)
+            print "-------------------"
+            print "-------------------"
+            print self._num_labels 
+            print "-------------------"
+            print "-------------------"
+            print "-------------------"
+            top[5].reshape(1, self._num_labels)
 
 
     def forward(self, bottom, top):
