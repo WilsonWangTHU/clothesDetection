@@ -107,7 +107,7 @@ __C.TEST.BBOX_REG = True
 #
 
 # now for the overall settings ---- by Tingwu Wang
-__C.MULTI_LABEL = True
+__C.MULTI_LABEL = False
 
 # set this variable to false if we want 26 class
 __C.ThreeClass = True

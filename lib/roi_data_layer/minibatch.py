@@ -13,7 +13,7 @@ import cv2
 from fast_rcnn.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 
-def get_minibatch(roidb, num_classes):
+def get_minibatch(roidb, num_classes, num_labels):
     """Given a roidb, construct a minibatch sampled from it."""
 
     num_images = len(roidb)
@@ -34,11 +34,18 @@ def get_minibatch(roidb, num_classes):
     labels_blob = np.zeros((0), dtype=np.float32)
     bbox_targets_blob = np.zeros((0, 4 * num_classes), dtype=np.float32)
     bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
+    if cfg.MULTI_LABEL:
+        multi_label_blob = np.zeros((0, num_labels), dtype=np.float32)
     # all_overlaps = []
     for im_i in xrange(num_images):
-        labels, overlaps, im_rois, bbox_targets, bbox_loss \
-            = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
-                           num_classes)
+        if cfg.MULTI_LABEL:
+            labels, overlaps, im_rois, bbox_targets, bbox_loss, multi_label_this \
+                = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
+                               num_classes)
+        else:
+            labels, overlaps, im_rois, bbox_targets, bbox_loss \
+                = _sample_rois(roidb[im_i], fg_rois_per_image, rois_per_image,
+                               num_classes)
 
         # Add to RoIs blob
         rois = _project_im_rois(im_rois, im_scales[im_i])
@@ -50,6 +57,8 @@ def get_minibatch(roidb, num_classes):
         labels_blob = np.hstack((labels_blob, labels))
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
+        if cfg.MULTI_LABEL:
+            multi_label_blob = np.vstack((multi_label_blob, multi_label_this))
         # all_overlaps = np.hstack((all_overlaps, overlaps))
 
     # For debug visualizations
@@ -62,7 +71,8 @@ def get_minibatch(roidb, num_classes):
     if cfg.TRAIN.BBOX_REG:
         blobs['bbox_targets'] = bbox_targets_blob
         blobs['bbox_loss_weights'] = bbox_loss_blob
-
+    if cfg.MULTI_LABEL:
+        blobs['multi_label'] = multi_label_blob
     return blobs
 
 def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
@@ -101,6 +111,10 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     keep_inds = np.append(fg_inds, bg_inds)
     # Select sampled values from various arrays:
     labels = labels[keep_inds]
+    if cfg.MULTI_LABEL:
+        multi_labels = roidb['multi_label']
+        multi_labels = multi_labels[keep_inds, :]
+        
     # Clamp labels for the background RoIs to 0
     labels[fg_rois_per_this_image:] = 0
     overlaps = overlaps[keep_inds]
@@ -109,7 +123,8 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     bbox_targets, bbox_loss_weights = \
             _get_bbox_regression_labels(roidb['bbox_targets'][keep_inds, :],
                                         num_classes)
-
+    if cfg.MULTI_LABEL:
+        return labels, overlaps, rois, bbox_targets, bbox_loss_weights, multi_labels
     return labels, overlaps, rois, bbox_targets, bbox_loss_weights
 
 def _get_image_blob(roidb, scale_inds):

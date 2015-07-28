@@ -23,81 +23,62 @@ import numpy as np
 import scipy.io as sio
 import caffe, os, sys, cv2
 import argparse
+import struct
+
+CONF_THRESH = 0.5
+NMS_THRESH = 0.3
+font = cv2.FONT_HERSHEY_SIMPLEX
 
 CLASSES = ('__background__',
            'Upper', 'Lower', 'Whole')
 
-NETS = {'vgg16': ('VGG16',
-                  'vgg16_fast_rcnn_iter_40000.caffemodel'),
-        'vgg_cnn_m_1024': ('VGG_CNN_M_1024',
-                           'vgg_cnn_m_1024_fast_rcnn_iter_40000.caffemodel'),
-        'caffenet': ('ClothCaffeNet',
-                     'caffenet_fast_rcnn_iter_40000.caffemodel')}
-
-
-def vis_detections(im, class_name, dets, thresh=0.5):
+def vis_detections(im, class_name, dets, image_name, thresh=0.5):
     """Draw detected bounding boxes."""
-    inds = np.where(dets[:, -1] >= 0.1)[0]
+    inds = np.where(dets[:, -1] >= thresh)[0]
     dets = dets[inds, :]
-    print dets
-    print ""
-    print ""
-    print ""
-    a = np.sort(dets, axis=0)
-    print ""
-    print ""
-    print a    
-    print(os.path.dirname(os.path.realpath('__file__')))
-    raw_input()
+    
     if len(inds) == 0:
-        print "no detection!!!!!"
-        print "no detection!!!!!"
-        print "no detection!!!!!"
-        print "no detection!!!!!"
+        print "no detection!!!!! for class " + class_name
+        cv2.imwrite("/home/twwang/demo_results/" + \
+            os.path.split(image_name)[1], im)
         return
     else:
-        print inds
-        print class_name
-        print dets[inds, -1][0]
-
-#
-#    im = im[:, :, (2, 1, 0)]
-#    fig, ax = plt.subplots(figsize=(12, 12))
-#    ax.imshow(im, aspect='equal')
-#    for i in inds:
-#        bbox = dets[i, :4]
-#        score = dets[i, -1]
-#
-#        ax.add_patch(
-#            plt.Rectangle((bbox[0], bbox[1]),
-#                          bbox[2] - bbox[0],
-#                          bbox[3] - bbox[1], fill=False,
-#                          edgecolor='red', linewidth=3.5)
-#            )
-#        ax.text(bbox[0], bbox[1] - 2,
- #               '{:s} {:.3f}'.format(class_name, score),
-  #              bbox=dict(facecolor='blue', alpha=0.5),
-   #             fontsize=14, color='white')
-
-    #ax.set_title(('{} detections with '
-    #              'p({} | box) >= {:.1f}').format(class_name, class_name,
-     #                                             thresh),
-    #              fontsize=14)
-    #plt.axis('off')
-   # plt.tight_layout()
-   # plt.draw()
+        cv2.rectangle(im,(dets[0, 0], dets[0, 1]),
+                        (dets[0, 2], dets[0, 3]),
+                        (0,255,0), 3)
+        cv2.putText(im, 'Cls: ' + class_name + ',P: ' + str(dets[0, 4]),
+            (dets[0, 0], dets[0, 1]),
+            font, 0.5, (0,255,0), 1, 255)
+        #print im.shape
+        cv2.imwrite("/home/twwang/demo_results/" + \
+            os.path.split(image_name)[1], im)
 
 def demo(net, image_name, classes):
-    """Detect object classes in an image using pre-computed object proposals."""
 
-    # Load pre-computed Selected Search object proposals
-    box_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo',
-                            image_name + "04" + '_boxes.mat')
-    obj_proposals = sio.loadmat(box_file)['boxes']
+    # get the proposals by using the shell to use c++ codes    
+    os.system(
+        '/media/Elements/twwang/fast-rcnn/rcnn_test/proposals_for_python.sh' \
+        + ' ' + image_name)
+    
+    # Load computed Selected Search object proposals
+    data = open('/home/twwang/temp_proposal', "rb").read()
+    number_proposals = struct.unpack("i", data[0:4])[0]
+    number_edge = struct.unpack("i", data[4:8])[0]
+    
+    number_proposals = min(cfg.NUM_PPS, number_proposals)
+    obj_proposals = np.asarray(struct.unpack(
+        str(number_proposals * 4) + 'f',
+        data[8: 8 + 16 * number_proposals])).reshape(number_proposals, 4)
+    
+    #box_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo',
+    #                        image_name + "04" + '_boxes.mat')
+    #obj_proposals = sio.loadmat(box_file)['boxes']
 
     # Load the demo image
-    im_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo', image_name + '.jpg')
-    im = cv2.imread(im_file)
+    im = cv2.imread(image_name)    
+    #print im.shape
+    im = cv2.flip(im, 0)
+    im = cv2.transpose(im)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
@@ -108,22 +89,17 @@ def demo(net, image_name, classes):
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
     # Visualize detections for each class
-    CONF_THRESH = 0.8
-    NMS_THRESH = 0.3
-    for cls in classes:
+
+    for cls in ['Upper', 'Lower', 'Whole']:
         cls_ind = CLASSES.index(cls)
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
         cls_scores = scores[:, cls_ind]
-        print cls_scores.shape
-        print cls_boxes.shape
-        raw_input()
         dets = np.hstack((cls_boxes,
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
-        print 'All {} detections with p({} | box) >= {:.1f}'.format(cls, cls,
-                                                                    CONF_THRESH)
-        vis_detections(im, cls, dets, thresh=CONF_THRESH)
+        
+        vis_detections(im, cls, dets, image_name, thresh=CONF_THRESH)
 
 def parse_args():
     """Parse input arguments."""
@@ -132,9 +108,9 @@ def parse_args():
                         default=0, type=int)
     parser.add_argument('--cpu', dest='cpu_mode',
                         help='Use CPU mode (overrides --gpu)',
-                        action='store_true')
-    parser.add_argument('--net', dest='demo_net', help='Network to use [vgg16]',
-                        choices=NETS.keys(), default='vgg16')
+                        action='store_true')    
+    parser.add_argument('--image', dest='img',
+                        help='The input image',)
 
     args = parser.parse_args()
 
@@ -143,10 +119,11 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    prototxt = os.path.join(cfg.ROOT_DIR, 'models', NETS[args.demo_net][0],
+    prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
                             'test.prototxt')
-    caffemodel = os.path.join(cfg.ROOT_DIR, 'data', 'fast_rcnn_models',
-                              NETS[args.demo_net][1])
+    caffemodel = os.path.join(cfg.ROOT_DIR+
+    '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
+    'caffenet_fast_rcnn_iter_40000.caffemodel')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/script/'
@@ -157,19 +134,11 @@ if __name__ == '__main__':
     else:
         caffe.set_mode_gpu()
         caffe.set_device(args.gpu_id)
+        
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
 
     print '\n\nLoaded network {:s}'.format(caffemodel)
 
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-    print 'Demo for data/demo/00000.jpg'
-    demo(net, '00000', ('Upper',))
-
-    print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-    demo(net, '00000', ('Lower',))
-    print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-    demo(net, '00000', ('Whole',))
-    # print 'Demo for data/demo/001551.jpg'
-    # demo(net, '001551', ('sofa', 'tvmonitor'))
-
-    #plt.show()
+    print('Processing the image')
+    demo(net, args.img, ('Upper',))
