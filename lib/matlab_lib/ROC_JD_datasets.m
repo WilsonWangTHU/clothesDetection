@@ -6,17 +6,31 @@
 % ------------------------------------------------------------------------
 
 function [number_gt, number_pst_detection, ...
-    number_detection, number_recall] = ...
-    ROC_JD_datasets(method, cfd_threshhold, IOU_threshhold)
+    number_detection, number_recall, ...
+    cat_number_gt, cat_number_pst_detection, ...
+    cat_number_detection, cat_number_recall] = ...
+    ROC_JD_datasets(method, cfd_threshhold, IOU_threshhold, ...
+    plot_for_each_category)
 % the result variable
 number_gt = 0; number_pst_detection = 0;
 number_detection = 0; number_recall = 0;
+
+% record the three class if necessary
+three_number_gt = zeros(3, 1); three_number_pst_detection = zeros(3, 1);
+three_number_detection = zeros(3, 1); three_number_recall = zeros(3, 1);
+
+% record the 26 class if necessary
+category_number_gt = zeros(26, 1);
+category_number_pst_detection = zeros(26, 1);
+category_number_detection = zeros(26, 1);
+category_number_recall = zeros(26, 1);
 
 % basic experiment parameters
 number_category = 26;
 
 % transmit the 26 class into the 3 class, upper, lower and whole
-twentysix2three = [ones(1, 7), 3, ones(1, 2), 3, ones(1, 8), 3, ones(1, 6)];
+twentysix2three = [ones(1, 7), 3, ones(1, 2), 3, ones(1, 8), 3, ...
+    2 * ones(1, 6)];
 
 % prepare the path directory
 switch method
@@ -93,11 +107,41 @@ for i_category = 1: 1: number_category
         number_detection = number_detection + sgl_number_detection;
         number_recall = number_recall + sgl_number_recall;
         
+        
+        if plot_for_each_category == true
+            three_number_gt(twentysix2three(i_category)) = ...
+                three_number_gt(twentysix2three(i_category)) + ...
+                sgl_number_gt;
+            three_number_pst_detection(twentysix2three(i_category)) = ...
+                three_number_pst_detection(twentysix2three(i_category)) + ...
+                sgl_number_pst_detection;
+            three_number_detection(twentysix2three(i_category)) = ...
+                three_number_detection(twentysix2three(i_category)) + ...
+                sgl_number_detection;
+            three_number_recall(twentysix2three(i_category)) = ...
+                three_number_recall(twentysix2three(i_category)) + ...
+                sgl_number_recall;
+            
+            category_number_gt(i_category) = ...
+                category_number_gt(i_category) + sgl_number_gt;
+            category_number_pst_detection(i_category) = ...
+                category_number_pst_detection(i_category) + ...
+                sgl_number_pst_detection;
+            category_number_detection(i_category) = ...
+                category_number_detection(i_category) + sgl_number_detection;
+            category_number_recall(i_category) = ...
+                category_number_recall(i_category) + sgl_number_recall;
+        end
+        
         i_image = i_image + 1;
         tline = fgets(image_name_file);  % read the next line
     end
     
 end
 
+cat_number_gt = [three_number_gt; category_number_gt];
+cat_number_pst_detection = [three_number_pst_detection; ...
+    category_number_pst_detection];
+cat_number_detection = [three_number_detection; category_number_detection];
+cat_number_recall = [three_number_recall; category_number_recall];
 
-end

@@ -187,7 +187,7 @@ class imdb(object):
             overlaps = np.zeros((num_boxes, self.num_classes),
                     dtype=np.float32)
             if cfg.MULTI_LABEL == True:
-                multi_label = np.zeros((num_boxes, self.len_label),
+                multi_label = -1 * np.ones((num_boxes, self.len_label),
                         dtype=np.int32)
 
             if gt_roidb is not None:
