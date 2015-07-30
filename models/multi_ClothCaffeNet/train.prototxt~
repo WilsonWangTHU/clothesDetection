@@ -361,8 +361,8 @@ layer {
 layer {
   name: "loss_multi_label"
   type: "MultiLabelLoss"
-  bottom: "multi_label"
   bottom: "multi_label_score"
+  bottom: "multi_label"
   top: "loss_multi_label"
-  loss_weight: 1
+  loss_weight: 0.1
 }

@@ -205,7 +205,12 @@ def im_detect(net, im, boxes):
         scores = scores[inv_index, :]
         pred_boxes = pred_boxes[inv_index, :]
 
-    return scores, pred_boxes
+    if not cfg.MULTI_LABEL:
+        return scores, pred_boxes
+    
+    labels = blobs_out['multi_label_score']
+    return scores, pred_boxes, labels
+    
 
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""

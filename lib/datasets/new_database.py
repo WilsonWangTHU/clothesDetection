@@ -397,7 +397,7 @@ class new_database(datasets.imdb):
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         if cfg.MULTI_LABEL == True:
             multi_label = \
-                    np.zeros((num_objs, self._len_label), dtype=np.int32)
+                    -1 * np.ones((num_objs, self._len_label), dtype=np.int32)
 
         # Load object bounding boxes into a data frame. first we load the
         # type class and the texture class

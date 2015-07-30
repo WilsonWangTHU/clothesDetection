@@ -38,11 +38,12 @@ def vis_detections(im, class_name, dets, image_name, thresh=0.5):
     dets = dets[inds, :]
     
     if len(inds) == 0:
-        print "no detection!!!!! for class " + class_name
+        print("No detection for class " + class_name)
         cv2.imwrite("/home/twwang/demo_results/" + \
             os.path.split(image_name)[1], im)
         return
     else:
+        print("Detection found for class " + class_name)
         cv2.rectangle(im,(dets[0, 0], dets[0, 1]),
                         (dets[0, 2], dets[0, 3]),
                         (0,255,0), 3)
@@ -53,7 +54,7 @@ def vis_detections(im, class_name, dets, image_name, thresh=0.5):
         cv2.imwrite("/home/twwang/demo_results/" + \
             os.path.split(image_name)[1], im)
 
-def demo(net, image_name, classes):
+def demo(net, image_name):
 
     # get the proposals by using the shell to use c++ codes    
     os.system(
@@ -64,18 +65,16 @@ def demo(net, image_name, classes):
     data = open('/home/twwang/temp_proposal', "rb").read()
     number_proposals = struct.unpack("i", data[0:4])[0]
     number_edge = struct.unpack("i", data[4:8])[0]
-    
+    assert number_edge == 4, 'The size is not matched!\n' + \
+        'Note that the first two variables are the number of proposals\n' + \
+        ' and number of coordinates in a box, which is 4 by default\n'
+        
     number_proposals = min(cfg.NUM_PPS, number_proposals)
     obj_proposals = np.asarray(struct.unpack(
         str(number_proposals * 4) + 'f',
         data[8: 8 + 16 * number_proposals])).reshape(number_proposals, 4)
     
-    #box_file = os.path.join(cfg.ROOT_DIR, 'data', 'demo',
-    #                        image_name + "04" + '_boxes.mat')
-    #obj_proposals = sio.loadmat(box_file)['boxes']
-
-    # Load the demo image
-    im = cv2.imread(image_name)    
+    im = cv2.imread(image_name)
     #print im.shape
     im = cv2.flip(im, 0)
     im = cv2.transpose(im)
@@ -83,8 +82,12 @@ def demo(net, image_name, classes):
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(net, im, obj_proposals)
+    if cfg.MULTI_LABEL:
+        scores, boxes, multi_labels = im_detect(net, im, obj_proposals)
+    else:
+        scores, boxes = im_detect(net, im, obj_proposals)        
     timer.toc()
+    
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
 
@@ -104,7 +107,8 @@ def demo(net, image_name, classes):
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
-    parser.add_argument('--gpu', dest='gpu_id', help='GPU device id to use [0]',
+    parser.add_argument('--gpu', dest='gpu_id', 
+                        help='GPU device id to use [0]',
                         default=0, type=int)
     parser.add_argument('--cpu', dest='cpu_mode',
                         help='Use CPU mode (overrides --gpu)',
@@ -126,8 +130,7 @@ if __name__ == '__main__':
     'caffenet_fast_rcnn_iter_40000.caffemodel')
 
     if not os.path.isfile(caffemodel):
-        raise IOError(('{:s} not found.\nDid you run ./data/script/'
-                       'fetch_fast_rcnn_models.sh?').format(caffemodel))
+        raise IOError(('{:s} not found.\n').format(caffemodel))
 
     if args.cpu_mode:
         caffe.set_mode_cpu()
@@ -141,4 +144,4 @@ if __name__ == '__main__':
 
     print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
     print('Processing the image')
-    demo(net, args.img, ('Upper',))
+    demo(net, args.img)
