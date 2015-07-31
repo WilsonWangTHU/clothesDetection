@@ -15,9 +15,12 @@ from fast_rcnn.config import cfg, cfg_from_file, get_output_dir
 from datasets.factory import get_imdb
 import caffe
 import argparse
+from datasets import ROOT_DIR
 import pprint
 import numpy as np
 import sys
+import os
+import cPickle
 
 def parse_args():
     """
@@ -74,12 +77,32 @@ if __name__ == '__main__':
     caffe.set_mode_gpu()
     if args.gpu_id is not None:
         caffe.set_device(args.gpu_id)
-
-    imdb = get_imdb(args.imdb_name)
-    print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-    roidb = get_training_roidb(imdb)
-
-    output_dir = get_output_dir(imdb, None)
+    
+    cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
+    cache_file = os.path.join(cache_path, \
+        args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
+        '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+        '_BLC=' + str(cfg.BALANCED) + \
+        '_COF=' + str(cfg.BALANCED_COF) + \
+        '_TT1000=' + str(cfg.TESTTYPE1000) + \
+        '_solver_roidb.pkl')
+    
+    if os.path.exists(cache_file):
+        with open(cache_file, 'rb') as fid:
+            roidb = cPickle.load(fid)
+            print('The precomputed roidb loaded')
+            output_dir = get_output_dir(args.imdb_name, None)
+    else:    
+        imdb = get_imdb(args.imdb_name)
+        print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+        roidb = get_training_roidb(imdb)
+        output_dir = get_output_dir(imdb.name, None)
+        
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'The precomputed roidb saved to {}'.format(cache_file)
+        
+        
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     train_net(args.solver, roidb, output_dir,

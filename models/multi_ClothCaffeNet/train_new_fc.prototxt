@@ -291,6 +291,66 @@ layer {
   }
 }
 
+
+
+layer {
+  name: "fc80"
+  type: "InnerProduct"
+  bottom: "pool5"
+  top: "fc80"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu80"
+  type: "ReLU"
+  bottom: "fc80"
+  top: "fc80"
+}
+layer {
+  name: "drop80"
+  type: "Dropout"
+  bottom: "fc80"
+  top: "fc80"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  name: "multi_label_score"
+  type: "InnerProduct"
+  bottom: "fc80"
+  top: "multi_label_score"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 23
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
 layer {
   name: "bbox_pred"
   type: "InnerProduct"
@@ -316,56 +376,9 @@ layer {
     }
   }
 }
-
-layer {
-  name: "multi_label_score"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "multi_label_score_raw1"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 23
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-
-layer {
-  name: "encode1neuron"
-  bottom: "multi_label_score_raw1"
-  top: "multi_label_score_raw2"
-  type: "Sigmoid"
-}
-
-layer {
-  name: "layer"
-  bottom: "multi_label_score_raw2"
-  top: "multi_label_score"
-  type: "Power"
-  power_param {
-    power: 1
-    scale: 2
-    shift: -1
-  }
-}
-
-
 layer {
   name: "loss_multi_label"
-  type: "EuclideanLossLayer"
+  type: "MultiLabelLoss"
   bottom: "multi_label_score"
   bottom: "multi_label"
   top: "loss_multi_label"

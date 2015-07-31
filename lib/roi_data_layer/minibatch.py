@@ -174,12 +174,6 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         cls = clss[ind]
         start = 4 * cls
         end = start + 4
-        #print start
-        #print end
-        #print bbox_targets[ind, start: end].shape
-        #print bbox_target_data[ind, 1:].shape
-        #print bbox_targets[ind, :].shape
-        #print clss[inds]
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
         bbox_loss_weights[ind, start:end] = [1., 1., 1., 1.]
     return bbox_targets, bbox_loss_weights

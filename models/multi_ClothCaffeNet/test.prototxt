@@ -231,6 +231,58 @@ layer {
     dropout_ratio: 0.5
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+layer {
+  name: "fc8"
+  type: "InnerProduct"
+  bottom: "pool5"
+  top: "fc8"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 4096
+  }
+}
+layer {
+  name: "relu8"
+  type: "ReLU"
+  bottom: "fc8"
+  top: "fc8"
+}
+layer {
+  name: "drop8"
+  type: "Dropout"
+  bottom: "fc8"
+  top: "fc8"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+
+
+
+
+
+
+
+
 layer {
   name: "fc7"
   type: "InnerProduct"
@@ -316,7 +368,7 @@ layer {
 layer {
   name: "multi_label_score"
   type: "InnerProduct"
-  bottom: "fc7"
+  bottom: "fc8"
   top: "multi_label_score"
   param {
     lr_mult: 1
