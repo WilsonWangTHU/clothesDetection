@@ -31,7 +31,9 @@ void MultiLabelLossLayer<Dtype>::Reshape(
       "MULTI_LABEL_LOSS layer inputs must have the same count.";
   if (top.size() >= 1) {
    // sigmoid cross entropy loss (averaged across batch)
-    top[0]->Reshape(1, 1, 1, 1);
+    //std::cout<<"The size of the top is "<<top.size();
+    //exit(1);
+    //top[0]->Reshape(1, 1, 1, 1);
   }
   if (top.size() == 2) {
    // softmax output

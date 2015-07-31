@@ -107,7 +107,7 @@ __C.TEST.BBOX_REG = True
 #
 
 # now for the overall settings ---- by Tingwu Wang
-__C.MULTI_LABEL = True
+__C.MULTI_LABEL = False
 
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
@@ -153,7 +153,7 @@ __C.DB_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..', 'data', 'DB
 # Place outputs under an experiments directory
 __C.EXP_DIR = 'default'
 
-def get_output_dir(imdb, net):
+def get_output_dir(imdb_name=None, net=None):
     """Return the directory where experimental artifacts are placed.
 
     A canonical path is built using the name from an imdb and a network
@@ -169,7 +169,8 @@ def get_output_dir(imdb, net):
     if __C.DEBUG_CLASS_WHOLE == True:
         name_string = name_string + '_DEBUG=' + str(__C.DEBUG_CLASS_WHOLE)
 
-    path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name + name_string))
+    path = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, 
+                                imdb_name + name_string))
     if net is None:
         return path
     else:

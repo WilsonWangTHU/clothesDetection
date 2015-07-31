@@ -1,19 +1,17 @@
 name: "CaffeNet"
-layer {
-  name: 'data'
-  type: 'Python'
-  top: 'data'
-  top: 'rois'
-  top: 'labels'
-  top: 'bbox_targets'
-  top: 'bbox_loss_weights'
-  top: 'multi_label'
-  python_param {
-    module: 'roi_data_layer.layer'
-    layer: 'RoIDataLayer'
-    param_str: "{'num_classes': 4,'num_labels': 23}"
-  }
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 227
+  dim: 227
 }
+input: "rois"
+input_shape {
+  dim: 1 # to be changed on-the-fly to num ROIs
+  dim: 5 # [batch ind, x1, y1, x2, y2] zero-based indexing
+}
+# the first conv layer
 layer {
   name: "conv1"
   type: "Convolution"
@@ -290,7 +288,6 @@ layer {
     }
   }
 }
-
 layer {
   name: "bbox_pred"
   type: "InnerProduct"
@@ -316,12 +313,11 @@ layer {
     }
   }
 }
-
 layer {
   name: "multi_label_score"
   type: "InnerProduct"
   bottom: "fc7"
-  top: "multi_label_score_raw1"
+  top: "multi_label_score"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -342,50 +338,9 @@ layer {
     }
   }
 }
-
 layer {
-  name: "encode1neuron"
-  bottom: "multi_label_score_raw1"
-  top: "multi_label_score_raw2"
-  type: "Sigmoid"
-}
-
-layer {
-  name: "layer"
-  bottom: "multi_label_score_raw2"
-  top: "multi_label_score"
-  type: "Power"
-  power_param {
-    power: 1
-    scale: 2
-    shift: -1
-  }
-}
-
-
-layer {
-  name: "loss_multi_label"
-  type: "EuclideanLossLayer"
-  bottom: "multi_label_score"
-  bottom: "multi_label"
-  top: "loss_multi_label"
-  loss_weight: 1
-}
-layer {
-  name: "loss_cls"
-  type: "SoftmaxWithLoss"
+  name: "cls_prob"
+  type: "Softmax"
   bottom: "cls_score"
-  bottom: "labels"
-  top: "loss_cls"
-  loss_weight: 1
+  top: "cls_prob"
 }
-layer {
-  name: "loss_bbox"
-  type: "SmoothL1Loss"
-  bottom: "bbox_pred"
-  bottom: "bbox_targets"
-  bottom: "bbox_loss_weights"
-  top: "loss_bbox"
-  loss_weight: 1
-}
-
