@@ -209,6 +209,7 @@ def im_detect(net, im, boxes):
         return scores, pred_boxes
     
     labels = blobs_out['multi_label_score']
+    labels = labels[inv_index, :]
     return scores, pred_boxes, labels
     
 

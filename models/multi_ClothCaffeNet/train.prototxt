@@ -361,8 +361,6 @@ layer {
     shift: -1
   }
 }
-
-
 layer {
   name: "loss_multi_label"
   type: "EuclideanLoss"

@@ -32,9 +32,10 @@ void MultiLabelLossLayer<Dtype>::Forward_gpu(
           log(1 + exp(input_data[i] - 2 * input_data[i] * (input_data[i] >= 0)));
     }
   }
-  if (top.size() >= 1) {
-    top[0]->mutable_cpu_data()[0] = loss / num;
-  }
+  // if (top.size() >= 1) {
+  //   top[0]->mutable_cpu_data()[0] = loss / num;
+  // }
+  top[0]->mutable_cpu_data()[0] = loss / num;
 }
 
 template <typename Dtype>
