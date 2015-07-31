@@ -29,17 +29,16 @@ void MultiLabelLossLayer<Dtype>::Reshape(
   LossLayer<Dtype>::Reshape(bottom, top);
   CHECK_EQ(bottom[0]->count(), bottom[1]->count()) <<
       "MULTI_LABEL_LOSS layer inputs must have the same count.";
-  if (top.size() >= 1) {
-   // sigmoid cross entropy loss (averaged across batch)
-    //std::cout<<"The size of the top is "<<top.size();
-    //exit(1);
-    //top[0]->Reshape(1, 1, 1, 1);
-  }
-  if (top.size() == 2) {
-   // softmax output
-    top[1]->ReshapeLike(*sigmoid_output_.get());
-    top[1]->ShareData(*sigmoid_output_.get());
-  }
+  // if (top.size() >= 1) {
+  //  // sigmoid cross entropy loss (averaged across batch)
+  //   top[0]->Reshape(1, 1, 1, 1);
+  // }
+  // if (top.size() == 2) {
+  //  // softmax output
+  //   top[1]->ReshapeLike(*sigmoid_output_.get());
+  //   top[1]->ShareData(*sigmoid_output_.get());
+  // }
+  sigmoid_layer_->Reshape(sigmoid_bottom_vec_, sigmoid_top_vec_);
 }
 
 template <typename Dtype>
@@ -62,9 +61,10 @@ void MultiLabelLossLayer<Dtype>::Forward_cpu(
           log(1 + exp(input_data[i] - 2 * input_data[i] * (input_data[i] >= 0)));
     }
   }
-  if (top.size() >= 1) {
-    top[0]->mutable_cpu_data()[0] = loss / num;
-  }
+  // if (top.size() >= 1) {
+  //   top[0]->mutable_cpu_data()[0] = loss / num;
+  // }
+  top[0]->mutable_cpu_data()[0] = loss / num;
 }
 
 template <typename Dtype>

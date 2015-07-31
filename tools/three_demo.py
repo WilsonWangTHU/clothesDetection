@@ -68,7 +68,8 @@ def demo(net, image_name):
     assert number_edge == 4, 'The size is not matched!\n' + \
         'Note that the first two variables are the number of proposals\n' + \
         ' and number of coordinates in a box, which is 4 by default\n'
-        
+    
+    #cfg.NUM_PPS = 10
     number_proposals = min(cfg.NUM_PPS, number_proposals)
     obj_proposals = np.asarray(struct.unpack(
         str(number_proposals * 4) + 'f',
@@ -76,8 +77,8 @@ def demo(net, image_name):
     
     im = cv2.imread(image_name)
     #print im.shape
-    im = cv2.flip(im, 0)
-    im = cv2.transpose(im)
+    #im = cv2.flip(im, 0)
+    #im = cv2.transpose(im)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
@@ -123,11 +124,18 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
-                            'test.prototxt')
-    caffemodel = os.path.join(cfg.ROOT_DIR+
-    '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
-    'caffenet_fast_rcnn_iter_40000.caffemodel')
+    if not cfg.MULTI_LABEL:    
+        caffemodel = os.path.join(cfg.ROOT_DIR +
+            '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
+            'caffenet_fast_rcnn_iter_40000.caffemodel')
+        prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
+                                'test.prototxt')
+    else:
+        caffemodel = os.path.join(cfg.ROOT_DIR +
+            '/output/default/clothesDataset_train_3CL=True_MUL_LAB=True',
+            'caffenet_fast_rcnn_iter_40000.caffemodel')
+        prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'multi_ClothCaffeNet',
+                                'test_elu.prototxt')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\n').format(caffemodel))

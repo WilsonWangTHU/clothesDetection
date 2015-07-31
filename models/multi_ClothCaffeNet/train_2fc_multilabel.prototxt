@@ -265,6 +265,74 @@ layer {
     dropout_ratio: 0.5
   }
 }
+
+
+layer {
+  name: "fc60"
+  type: "InnerProduct"
+  bottom: "pool5"
+  top: "fc60"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1024
+  }
+}
+layer {
+  name: "relu60"
+  type: "ReLU"
+  bottom: "fc60"
+  top: "fc60"
+}
+layer {
+  name: "drop60"
+  type: "Dropout"
+  bottom: "fc60"
+  top: "fc60"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layer {
+  name: "fc70"
+  type: "InnerProduct"
+  bottom: "fc60"
+  top: "fc70"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 20
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1024
+  }
+}
+layer {
+  name: "relu70"
+  type: "ReLU"
+  bottom: "fc70"
+  top: "fc70"
+}
+layer {
+  name: "drop70"
+  type: "Dropout"
+  bottom: "fc70"
+  top: "fc70"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+
 layer {
   name: "cls_score"
   type: "InnerProduct"
@@ -290,7 +358,31 @@ layer {
     }
   }
 }
-
+layer {
+  name: "multi_label_score"
+  type: "InnerProduct"
+  bottom: "fc70"
+  top: "multi_label_score"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 23
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
 layer {
   name: "bbox_pred"
   type: "InnerProduct"
@@ -316,56 +408,9 @@ layer {
     }
   }
 }
-
-layer {
-  name: "multi_label_score"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "multi_label_score_raw1"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 23
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-
-layer {
-  name: "encode1neuron"
-  bottom: "multi_label_score_raw1"
-  top: "multi_label_score_raw2"
-  type: "Sigmoid"
-}
-
-layer {
-  name: "layer"
-  bottom: "multi_label_score_raw2"
-  top: "multi_label_score"
-  type: "Power"
-  power_param {
-    power: 1
-    scale: 2
-    shift: -1
-  }
-}
-
-
 layer {
   name: "loss_multi_label"
-  type: "EuclideanLoss"
+  type: "MultiLabelLoss"
   bottom: "multi_label_score"
   bottom: "multi_label"
   top: "loss_multi_label"
