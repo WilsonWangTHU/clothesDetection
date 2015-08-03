@@ -78,7 +78,7 @@ class new_database(datasets.imdb):
                               '卫裤/运动裤'
                               )
         self._texture_classes = ('一致色', '横条纹', '纵条纹',
-                                 '其他条纹', '豹纹斑马纹', '格子',
+                                 '豹纹斑马纹', '格子',
                                  '圆点', '乱花', 'LOGO及印花图案', '其他'
                                  )
         self._neckband_classes = ('圆领', 'V领', '翻领',
@@ -238,6 +238,7 @@ class new_database(datasets.imdb):
         cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
                 '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
                 '_BLC=' + str(cfg.BALANCED) + \
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \
@@ -267,6 +268,7 @@ class new_database(datasets.imdb):
         cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
                 '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
                 '_BLC=' + str(cfg.BALANCED) + \
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \

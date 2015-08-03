@@ -208,7 +208,14 @@ def im_detect(net, im, boxes):
     if not cfg.MULTI_LABEL:
         return scores, pred_boxes
     
-    labels = blobs_out['multi_label_score']
+    if not cfg.MULTI_LABEL_SOFTMAX:
+        labels = blobs_out['multi_label_score']
+        labels = labels[inv_index, :]
+        return scores, pred_boxes, labels
+
+    labels = np.hstack((blobs_out['texture_score'],
+            blobs_out['neckband_score'],
+            blobs_out['sleeve_score'])).astype(np.float32)
     labels = labels[inv_index, :]
     return scores, pred_boxes, labels
     

@@ -82,6 +82,7 @@ if __name__ == '__main__':
     cache_file = os.path.join(cache_path, \
         args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
         '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+        '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
         '_BLC=' + str(cfg.BALANCED) + \
         '_COF=' + str(cfg.BALANCED_COF) + \
         '_TT1000=' + str(cfg.TESTTYPE1000) + \
@@ -102,7 +103,7 @@ if __name__ == '__main__':
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'The precomputed roidb saved to {}'.format(cache_file)
         
-    output_dir = output_dir + '_test'
+    #//output_dir = output_dir + '_test'
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     train_net(args.solver, roidb, output_dir,

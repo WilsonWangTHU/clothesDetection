@@ -72,7 +72,22 @@ def get_minibatch(roidb, num_classes, num_labels):
         blobs['bbox_targets'] = bbox_targets_blob
         blobs['bbox_loss_weights'] = bbox_loss_blob
     if cfg.MULTI_LABEL:
-        blobs['multi_label'] = multi_label_blob
+        if not cfg.MULTI_LABEL_SOFTMAX:
+            blobs['multi_label'] = multi_label_blob
+        else:
+            assert multi_label_blob.shape[1] == \
+                    cfg.NUM_MULTI_LABEL_TEXTURE + \
+                    cfg.NUM_MULTI_LABEL_NECKBAND + \
+                    cfg.NUM_MULTI_LABEL_SLEEVE, \
+                    "The number of labels should match!"
+            blobs['texture'] = multi_label_blob[:, 0 : cfg.NUM_MULTI_LABEL_TEXTURE]
+            blobs['neckband'] = multi_label_blob[:, 
+                    cfg.NUM_MULTI_LABEL_TEXTURE : cfg.NUM_MULTI_LABEL_NECKBAND + \
+                            cfg.NUM_MULTI_LABEL_TEXTURE]
+            blobs['sleeve'] = multi_label_blob[:, 
+                    cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
+                    : cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
+                    + cfg.NUM_MULTI_LABEL_SLEEVE]
     return blobs
 
 def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
