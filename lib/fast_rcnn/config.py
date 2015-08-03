@@ -108,6 +108,7 @@ __C.TEST.BBOX_REG = True
 
 # now for the overall settings ---- by Tingwu Wang
 __C.MULTI_LABEL = True
+__C.MULTI_LABEL_SOFTMAX = True
 
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
@@ -160,7 +161,8 @@ def get_output_dir(imdb_name=None, net=None):
     (if not None).
     """
     name_string = '_3CL=' + str(__C.ThreeClass) + \
-            '_MUL_LAB=' + str(__C.MULTI_LABEL)
+            '_MUL_LAB=' + str(__C.MULTI_LABEL) + \
+            '_FG_THRESH=' + str(__C.TRAIN.FG_THRESH)
     if __C.BALANCED == True:
         name_string = name_string + '_BLC=' + str(__C.BALANCED) + \
                 '_COF=' + str(__C.BALANCED)

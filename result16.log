@@ -1,0 +1,17 @@
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0803 10:34:36.485818 17281 solver.cpp:32] Initializing solver from parameters: 
+train_net: "/media/Elements/twwang/fast-rcnn/models/multi_ClothCaffeNet/train_1fc_pool5_multilabel.prototxt"
+base_lr: 0.001
+display: 100
+lr_policy: "step"
+gamma: 0.1
+momentum: 0.9
+weight_decay: 0.0005
+stepsize: 30000
+snapshot: 0
+snapshot_prefix: "caffenet_fast_rcnn"
+debug_info: true
+average_loss: 100
+I0803 10:34:36.514369 17281 solver.cpp:61] Creating training net from train_net file: /media/Elements/twwang/fast-rcnn/models/multi_ClothCaffeNet/train_1fc_pool5_multilabel.prototxt
+F0803 10:34:36.532843 17281 io.cpp:34] Check failed: fd != -1 (-1 vs. -1) File not found: /media/Elements/twwang/fast-rcnn/models/multi_ClothCaffeNet/train_1fc_pool5_multilabel.prototxt
+*** Check failure stack trace: ***

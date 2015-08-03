@@ -1,19 +1,17 @@
 name: "CaffeNet"
-layer {
-  name: 'data'
-  type: 'Python'
-  top: 'data'
-  top: 'rois'
-  top: 'labels'
-  top: 'bbox_targets'
-  top: 'bbox_loss_weights'
-  top: 'multi_label'
-  python_param {
-    module: 'roi_data_layer.layer'
-    layer: 'RoIDataLayer'
-    param_str: "{'num_classes': 4,'num_labels': 23}"
-  }
+input: "data"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 227
+  dim: 227
 }
+input: "rois"
+input_shape {
+  dim: 1 # to be changed on-the-fly to num ROIs
+  dim: 5 # [batch ind, x1, y1, x2, y2] zero-based indexing
+}
+# the first conv layer
 layer {
   name: "conv1"
   type: "Convolution"
@@ -265,19 +263,17 @@ layer {
     dropout_ratio: 0.5
   }
 }
-
-
 layer {
-  name: "fc60"
+  name: "fc_mul_1"
   type: "InnerProduct"
   bottom: "pool5"
-  top: "fc60"
+  top: "fc_mul_1"
   param {
-    lr_mult: 10
+    lr_mult: 1
     decay_mult: 1
   }
   param {
-    lr_mult: 20
+    lr_mult: 2
     decay_mult: 0
   }
   inner_product_param {
@@ -285,31 +281,31 @@ layer {
   }
 }
 layer {
-  name: "relu60"
+  name: "relu_mul_1"
   type: "ReLU"
-  bottom: "fc60"
-  top: "fc60"
+  bottom: "fc_mul_1"
+  top: "fc_mul_1"
 }
 layer {
-  name: "drop60"
+  name: "drop_mul_1"
   type: "Dropout"
-  bottom: "fc60"
-  top: "fc60"
+  bottom: "fc_mul_1"
+  top: "fc_mul_1"
   dropout_param {
     dropout_ratio: 0.5
   }
 }
 layer {
-  name: "fc70"
+  name: "fc_mul_2"
   type: "InnerProduct"
-  bottom: "fc60"
-  top: "fc70"
+  bottom: "fc_mul_1"
+  top: "fc_mul_2"
   param {
-    lr_mult: 10
+    lr_mult: 1
     decay_mult: 1
   }
   param {
-    lr_mult: 20
+    lr_mult: 2
     decay_mult: 0
   }
   inner_product_param {
@@ -317,22 +313,20 @@ layer {
   }
 }
 layer {
-  name: "relu70"
+  name: "relu_mul_2"
   type: "ReLU"
-  bottom: "fc70"
-  top: "fc70"
+  bottom: "fc_mul_2"
+  top: "fc_mul_2"
 }
 layer {
-  name: "drop70"
+  name: "drop_mul_2"
   type: "Dropout"
-  bottom: "fc70"
-  top: "fc70"
+  bottom: "fc_mul_2"
+  top: "fc_mul_2"
   dropout_param {
     dropout_ratio: 0.5
   }
 }
-
-
 layer {
   name: "cls_score"
   type: "InnerProduct"
@@ -348,31 +342,6 @@ layer {
   }
   inner_product_param {
     num_output: 4
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "multi_label_score"
-  type: "InnerProduct"
-  bottom: "fc70"
-  top: "multi_label_score"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 23
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -409,28 +378,33 @@ layer {
   }
 }
 layer {
-  name: "loss_multi_label"
-  type: "MultiLabelLoss"
-  bottom: "multi_label_score"
-  bottom: "multi_label"
-  top: "loss_multi_label"
-  loss_weight: 1
+  name: "multi_label_score"
+  type: "InnerProduct"
+  bottom: "fc_mul_2"
+  top: "multi_label_score"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 23
+    weight_filler {
+      type: "gaussian"
+      std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
 }
 layer {
-  name: "loss_cls"
-  type: "SoftmaxWithLoss"
+  name: "cls_prob"
+  type: "Softmax"
   bottom: "cls_score"
-  bottom: "labels"
-  top: "loss_cls"
-  loss_weight: 1
+  top: "cls_prob"
 }
-layer {
-  name: "loss_bbox"
-  type: "SmoothL1Loss"
-  bottom: "bbox_pred"
-  bottom: "bbox_targets"
-  bottom: "bbox_loss_weights"
-  top: "loss_bbox"
-  loss_weight: 1
-}
-

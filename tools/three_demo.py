@@ -58,7 +58,7 @@ def demo(net, image_name):
 
     # get the proposals by using the shell to use c++ codes    
     os.system(
-        '/media/Elements/twwang/fast-rcnn/rcnn_test/proposals_for_python.sh' \
+        '/media/DataDisk/twwang/fast-rcnn/rcnn_test/proposals_for_python.sh' \
         + ' ' + image_name)
     
     # Load computed Selected Search object proposals

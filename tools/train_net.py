@@ -102,7 +102,7 @@ if __name__ == '__main__':
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
         print 'The precomputed roidb saved to {}'.format(cache_file)
         
-        
+    output_dir = output_dir + '_test'
     print 'Output will be saved to `{:s}`'.format(output_dir)
 
     train_net(args.solver, roidb, output_dir,

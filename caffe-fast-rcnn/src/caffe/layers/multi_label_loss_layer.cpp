@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <vector>
-
+#include <iostream>
 #include "caffe/layer.hpp"
 #include "caffe/vision_layers.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -65,6 +65,8 @@ void MultiLabelLossLayer<Dtype>::Forward_cpu(
   //   top[0]->mutable_cpu_data()[0] = loss / num;
   // }
   top[0]->mutable_cpu_data()[0] = loss / num;
+  //exit(1);
+    // Scale down gradient
 }
 
 template <typename Dtype>
@@ -82,16 +84,17 @@ void MultiLabelLossLayer<Dtype>::Backward_cpu(
     const Dtype* sigmoid_output_data = sigmoid_output_->cpu_data();
     const Dtype* target = bottom[1]->cpu_data();
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
+    const Dtype loss_weight = top[0]->cpu_diff()[0];
     for (int i = 0; i < count; ++i) {
+      
       if (target[i] != 0) {
         bottom_diff[i] = sigmoid_output_data[i] - (target[i] > 0);
       } else {
         bottom_diff[i] = 0;
       }
     }
-    // Scale down gradient
-    const Dtype loss_weight = top[0]->cpu_diff()[0];
     caffe_scal(count, loss_weight / num, bottom_diff);
+
   }
 }
 
