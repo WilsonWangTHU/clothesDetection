@@ -74,8 +74,17 @@ class RoIDataLayer(caffe.Layer):
 
         self._num_classes = layer_params['num_classes']
         self._num_labels = 0
+        self._num_texture = 0
+        self._num_neckband = 0
+        self._num_sleeve = 0
         if cfg.MULTI_LABEL:
-            self._num_labels = layer_params['num_labels']
+            if not cfg.MULTI_LABEL_SOFTMAX:
+                self._num_labels = layer_params['num_labels']
+            else:
+                self._num_texture = layer_params['num_texture']
+                self._num_neckband = layer_params['num_neckband']
+                self._num_sleeve = layer_params['num_sleeve']
+
         # it is a place to consider!!! self._len_label= layer_params['num_classes']
 
         self._name_to_top_map = {
@@ -108,14 +117,16 @@ class RoIDataLayer(caffe.Layer):
             # thisbinary vector sepcifies the subset of active targets
             top[4].reshape(1, self._num_classes * 4)
         if cfg.MULTI_LABEL == True:
-            self._name_to_top_map['multi_label'] = 5
-            print "-------------------"
-            print "-------------------"
-            print self._num_labels 
-            print "-------------------"
-            print "-------------------"
-            print "-------------------"
-            top[5].reshape(1, self._num_labels)
+            if not cfg.MULTI_LABEL_SOFTMAX:
+                self._name_to_top_map['multi_label'] = 5
+                top[5].reshape(1, self._num_labels)
+            else:
+                self._name_to_top_map['texture'] = 5
+                top[5].reshape(1, self._num_texture)
+                self._name_to_top_map['neckband'] = 6
+                top[6].reshape(1, self._num_neckband)
+                self._name_to_top_map['sleeve'] = 7
+                top[7].reshape(1, self._num_sleeve)
 
 
     def forward(self, bottom, top):

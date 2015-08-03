@@ -187,15 +187,18 @@ class imdb(object):
             overlaps = np.zeros((num_boxes, self.num_classes),
                     dtype=np.float32)
             if cfg.MULTI_LABEL == True:
-                multi_label = -1 * np.ones((num_boxes, self.len_label),
-                        dtype=np.int32)
+                if cfg.MULTI_LABEL_SOFTMAX == True:
+                    multi_label = np.zeros((num_boxes,
+                        self.len_label), dtype=np.int32)
+                else:
+                    multi_label = -1 * np.ones((num_boxes,
+                        self.len_label), dtype=np.int32)
 
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
                 gt_overlaps = bbox_overlaps(boxes.astype(np.float),
                                             gt_boxes.astype(np.float))
-
                 argmaxes = gt_overlaps.argmax(axis=1)
                 maxes = gt_overlaps.max(axis=1)
                 I = np.where(maxes > 0)[0]
