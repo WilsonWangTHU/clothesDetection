@@ -16,6 +16,8 @@ template <typename Dtype>
 void MultiLabelLossLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   // The forward pass computes the sigmoid outputs.
+  Forward_cpu(bottom, top);
+  /*
   sigmoid_bottom_vec_[0] = bottom[0];
   sigmoid_layer_->Forward(sigmoid_bottom_vec_, sigmoid_top_vec_);
   // Compute the loss (negative log likelihood)
@@ -36,6 +38,7 @@ void MultiLabelLossLayer<Dtype>::Forward_gpu(
   //   top[0]->mutable_cpu_data()[0] = loss / num;
   // }
   top[0]->mutable_cpu_data()[0] = loss / num;
+  */
 }
 
 template <typename Dtype>

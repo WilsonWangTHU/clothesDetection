@@ -112,6 +112,7 @@ void SoftmaxWithLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
     // Scale gradient
     const Dtype loss_weight = top[0]->cpu_diff()[0];
+    
     if (normalize_) {
       caffe_scal(prob_.count(), loss_weight / count, bottom_diff);
     } else {

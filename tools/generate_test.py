@@ -1,11 +1,10 @@
+#coding=utf-8
 # -------------------------------------------------------
-#
 #   it is a python port of network test, generate the 
 #   results of the three class: Upper body(1), Lower 
 #   body (2), and the whole body(3)
 #
 #   Written by Tingwu Wang, 17.7.2015
-#
 # -------------------------------------------------------
 
 import _init_paths
@@ -18,17 +17,49 @@ import caffe, os, sys, cv2
 import argparse
 import struct
 
+texture_classes = ('一致色', '横条纹', '纵条纹',
+        '其他条纹', '豹纹斑马纹', '格子',
+        '圆点', '乱花', 'LOGO及印花图案', '其他'
+        )
+neckband_classes = ('圆领', 'V领', '翻领',
+        '立领', '高领', '围巾领',
+        '一字领', '大翻领西装领',
+        '连帽领', '其他'
+        )
+sleeve_classes = ('短袖', '中袖', '长袖')
+
+texture_classes = ('single_color', 'horizon_strip', 'vertical_strip',
+        'error', 'leopard_or_zebra', 'grid',
+        'dot', 'random_match', 'LOGO', 'other'
+        )
+neckband_classes = ('round_collar', 'V_collar', 'turn_down_collar',
+        'stand_collar', 'high_collar', 'shawl_collar',
+        'horizon_collar', 'golila_or_tailored',
+        'hooded_colar', 'other_collar'
+        )
+sleeve_classes = ('short_sleeve', 'middle_sleeve', 'long_sleeve')
+
+texture_to_label_ind = dict(zip(
+    xrange(len(texture_classes)), texture_classes))
+neckband_to_label_ind = dict(zip(
+    xrange(len(neckband_classes)),
+    neckband_classes
+    ))
+sleeve_to_label_ind = dict(zip(
+    xrange(len(sleeve_classes)),
+    sleeve_classes   
+    ))
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 num_category = 26
 num_class = 3
 
-Jingdong_root_dir = '/media/Elements/twwang/fast-rcnn/data/clothesDataset/test'
-Jingdong_output_dir = '/media/Elements/twwang/fast-rcnn/data/results/Jingdong'
+Jingdong_root_dir = '/media/DataDisk/twwang/fast-rcnn/data/clothesDataset/test'
+Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong'
 
-forever21_data_dir = '/media/Elements/twwang/fast-rcnn/data/CCP'
-forever21_output_dir = '/media/Elements/twwang/fast-rcnn/data/results/forever21'
+forever21_data_dir = '/media/DataDisk/twwang/fast-rcnn/data/CCP'
+forever21_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/forever21'
 
 top_number = 10
 
@@ -42,10 +73,44 @@ pred_preCls = np.zeros((26, 26), dtype=np.float)
 
 CONF_THRESH = 0.1
 PLOT_CONF_THRESH = 0.4
+PLOT_MULTI_LABEL_THRESH = 0.4
 NMS_THRESH = 0.3
 
 CLASSES = ('__background__', 'Upper', 'Lower', 'Whole')
 
+def get_attributive_string(attributive_vector):
+    
+    if np.max(attributive_vector[\
+            0 : len(texture_to_label_ind)]) > PLOT_MULTI_LABEL_THRESH:
+        attributive_string_texture = \
+                texture_to_label_ind[np.argmax(attributive_vector[\
+                0 : len(texture_to_label_ind)])]
+    else:
+        attributive_string_texture = '-1 '
+    if np.max(attributive_vector[\
+            len(texture_to_label_ind) : \
+            len(neckband_to_label_ind) + len(texture_to_label_ind)]) \
+            > PLOT_MULTI_LABEL_THRESH:
+        attributive_string_neckband = \
+                neckband_to_label_ind[np.argmax(attributive_vector[ \
+                len(texture_to_label_ind) : \
+                len(neckband_to_label_ind) + len(texture_to_label_ind)])]
+    else:
+        attributive_string_neckband = '-1 '
+    if np.max(attributive_vector[\
+            len(neckband_to_label_ind) + len(texture_to_label_ind) \
+            : len(texture_to_label_ind) + len(neckband_to_label_ind) + \
+            len(sleeve_to_label_ind)]) \
+            > PLOT_MULTI_LABEL_THRESH:
+        attributive_string_sleeve = \
+                sleeve_to_label_ind[np.argmax(attributive_vector[ \
+                len(texture_to_label_ind) + len(neckband_to_label_ind) \
+                : len(texture_to_label_ind) + len(neckband_to_label_ind) + \
+                len(sleeve_to_label_ind)])]
+    else:
+        attributive_string_sleeve = '-1 '
+    return attributive_string_texture, attributive_string_neckband, \
+        attributive_string_sleeve
 
 def readcloth_name(image_set_file):
     assert os.path.exists(image_set_file), \
@@ -130,7 +195,8 @@ def fowever21test(net, args):
         timer.tic()
         scores, boxes = im_detect(net, im, proposal_data)
         timer.toc()
-        print("The running time is {} on the {} th image".format(timer.total_time, i_image))
+        print("The running time is {} on the {} th image".\
+            format(timer.total_time, i_image))
         
         # for each class, we go for a nms
         for cls in xrange(1, num_class):
@@ -242,7 +308,8 @@ def fowever21test(net, args):
 def category_test(category, net, args):
 
     # reading the file names in the mapping files
-    image_set_file = os.path.join(Jingdong_root_dir, str(category), 'newGUIDMapping.txt')
+    image_set_file = os.path.join(Jingdong_root_dir, str(category),
+                                  'newGUIDMapping.txt')
     image_name = readcloth_name(image_set_file)
 
     # get the proposals
@@ -253,8 +320,16 @@ def category_test(category, net, args):
                                      str(category) + 'floatResults'), 'w')
     intwritter = open(os.path.join(Jingdong_output_dir, 
                                    str(category) + 'intResults'), 'w')
+
+    # if not testing the multi_label, the float results only record 
+    # the top 10 [x1, x2, y1, y2, prob].
+    # When testing the multi_label, the float results is then top 10
+    # [x1, x2, y1, y2, prob, attri(1:23) ]
     floatwritter.write(str(top_number * len(image_name)) + '\n')
-    floatwritter.write(str(5) + '\n')
+    if not cfg.MULTI_LABEL:
+        floatwritter.write(str(5) + '\n')
+    else:
+        floatwritter.write(str(5 + 23) + '\n')
     intwritter.write(str(top_number * len(image_name)) + '\n')
     intwritter.write(str(1) + '\n')
 
@@ -267,7 +342,14 @@ def category_test(category, net, args):
         # Detect all object classes and regress object bounds
         timer = Timer()
         timer.tic()
-        scores, boxes = im_detect(net, im, image_proposal[i_image])
+        # it is a better idea to set a TEST_MULTI_LABEL
+        if cfg.MULTI_LABEL:
+            scores, boxes, multi_label = \
+                    im_detect(net, im, image_proposal[i_image])
+        else:
+            scores, boxes = \
+                    im_detect(net, im, image_proposal[i_image])
+
         timer.toc()
         print("The running time is {} on the {} th image of categary {}".format(timer.total_time, i_image, category))
 
@@ -279,20 +361,41 @@ def category_test(category, net, args):
             dets = np.hstack((cls_boxes,
                 cls_scores[:, np.newaxis])).astype(np.float32)
             keep = nms(dets, NMS_THRESH)
+
+            # keep the needed
             dets = dets[keep, :]
+            if cfg.MULTI_LABEL:
+                multi_label_this = multi_label[keep, :]
 
             # get the sorted results
             inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
             dets = dets[inds, :]
+            if cfg.MULTI_LABEL:
+                multi_label_this = multi_label_this[inds, :]
+
             # get the data together
             cls_line = np.ones((dets.shape[0], 1)) * cls
 
-            if cls == 1:
-                results = dets.astype(np.float32)
-                results_cls = cls_line.astype(np.int32)
+            if not cfg.MULTI_LABEL:
+                if cls == 1:
+                    results = dets.astype(np.float32)
+                    results_cls = cls_line.astype(np.int32)
+                else:
+                    results = np.vstack((results, dets)).astype(np.float32)
+                    results_cls = \
+                            np.vstack((results_cls, cls_line)).astype(np.int32)
             else:
-                results = np.vstack((results, dets)).astype(np.float32)
-                results_cls = np.vstack((results_cls, cls_line)).astype(np.int32)
+                if cls == 1:
+                    results = \
+                            np.hstack((dets, multi_label_this)).astype(np.float32)
+                    results_cls = cls_line.astype(np.int32)
+                else:
+                    this_result = \
+                            np.hstack((dets, multi_label_this)).astype(np.float32)
+                    results = np.vstack((results, this_result)).astype(np.float32)
+                    results_cls = \
+                            np.vstack((results_cls, cls_line)).astype(np.int32)
+
 
         # sort the results
         scores = results[:, 4]
@@ -300,33 +403,41 @@ def category_test(category, net, args):
         
         results = results[order, :]
         results_cls = results_cls[order, :]
-        #if i_image == 130:
-         #   raw_input()
 
-        for i in xrange(0, top_number):
-            if i >= results.shape[0]:
-                floatwritter.write(str(-1) + ' ')
-                floatwritter.write(str(-1) + ' ')
-                floatwritter.write(str(-1) + ' ')
-                floatwritter.write(str(-1) + ' ')
-                floatwritter.write(str(-1) + ' ')
-                intwritter.write(str(-1) + ' ')
-            else:
-                floatwritter.write(str(results[i, 0]) + ' ')
-                floatwritter.write(str(results[i, 1]) + ' ')
-                floatwritter.write(str(results[i, 2]) + ' ')
-                floatwritter.write(str(results[i, 3]) + ' ')
-                floatwritter.write(str(results[i, 4]) + ' ')
-                intwritter.write(str(results_cls[i, 0]) + ' ')
-            intwritter.write('\n')
-            floatwritter.write('\n')
-            
+        if not cfg.MULTI_LABEL:
+            for i in xrange(0, top_number):
+                if i >= results.shape[0]:
+                    for j in xrange(0, 5):
+                        floatwritter.write(str(-1) + ' ')
+                    intwritter.write(str(-1) + ' ')
+                else:
+                    for j in xrange(0, 5):
+                       floatwritter.write(str(results[i, j]) + ' ')
+                    intwritter.write(str(results_cls[i, 0]) + ' ')
+                intwritter.write('\n')
+                floatwritter.write('\n')
+        else:
+            for i in xrange(0, top_number):
+                if i >= results.shape[0]:
+                    for j in xrange(0, 5 + 23):
+                        floatwritter.write(str(-1) + ' ')
+                    intwritter.write(str(-1) + ' ')
+                else:
+                    for j in xrange(0, 5 + 23):
+                       floatwritter.write(str(results[i, j]) + ' ')
+                    intwritter.write(str(results_cls[i, 0]) + ' ')
+                intwritter.write('\n')
+                floatwritter.write('\n')
+ 
         # plot the image if necessary        
         if args.plot == False:
             continue
         for i in xrange(0, results.shape[0]):            
             if results[i, 4] < PLOT_CONF_THRESH:
                 continue
+            put_string1, put_string2, put_string3 = get_attributive_string(
+                results[i, 5 : results.shape[1]])
+                
             if results_cls[i, 0] == 1:
                 cv2.rectangle(
                         im,(results[i, 0], results[i, 1]),
@@ -335,7 +446,8 @@ def category_test(category, net, args):
                 cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
                             ',P: ' + str(results[i, 4]),
                             (results[i, 0], results[i, 1]),
-                            font, 1, (0,255,0), 2, 255)
+                            font, 0.8, (0,255,0), 1, 255)
+
             else:
                 if results_cls[i, 0] == 2:
                     cv2.rectangle(
@@ -345,7 +457,7 @@ def category_test(category, net, args):
                     cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
                         ',P: ' + str(results[i, 4]),
                         (results[i, 0], results[i, 1]),
-                        font, 1, (255,0,0), 2, 255)
+                        font, 0.8, (255,0,0), 1, 255)
                 else:
                     cv2.rectangle(
                         im,(results[i, 0], results[i, 1]),
@@ -354,11 +466,19 @@ def category_test(category, net, args):
                     cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
                         ',P: ' + str(results[i, 4]),
                         (results[i, 0], results[i, 1]),
-                        font, 1, (0,0,255), 2, 255)
+                        font, 0.8, (0,0,255), 1, 255)
                         
+            cv2.putText(im, put_string1,
+                        (results[i, 0], int(results[i, 1] + 30)),
+                        font, 0.8, (255,255,0), 1, 255)
+            cv2.putText(im, put_string2,
+                        (results[i, 0], int(results[i, 1] + 60)),
+                        font, 0.8, (0,255,255), 1, 255)
+            cv2.putText(im, put_string3,
+                        (results[i, 0], int(results[i, 1] + 90)),
+                        font, 0.8, (255,0,255), 1, 255)        
         cv2.imwrite(os.path.join(Jingdong_output_dir, \
                 'images', str(category), image_name[i_image]), im)
-
 
     floatwritter.close();
     intwritter.close();
@@ -380,6 +500,9 @@ def parse_args():
     parser.add_argument('--testset', dest='dataset', help='',
         default='forever21')
     parser.add_argument('--plotImage', dest='plot', help='',
+        default='True')
+    parser.add_argument('--multi_label', dest='multi_label',
+        help='',
         default='True')
 
     args = parser.parse_args()
@@ -410,6 +533,11 @@ if __name__ == '__main__':
 
     print('\n\nLoaded network {:s}'.format(caffemodel))
  
+    # change the output dir if necessary, and change the global 
+    # flag
+    if cfg.MULTI_LABEL:
+        Jingdong_output_dir = Jingdong_output_dir + '_multi_label'
+
     # test for each category
     if args.dataset == 'Jingdong':
         for iNum in xrange(1, num_category+1):
