@@ -13,7 +13,7 @@ layer {
   python_param {
     module: 'roi_data_layer.layer'
     layer: 'RoIDataLayer'
-    param_str: "{'num_classes': 4,'num_sleeve': 3,'num_neckband': 10,'num_texture': 9}"
+    param_str: "{'num_classes': 4,'num_sleeve': 4,'num_neckband': 11,'num_texture': 10}"
   }
 }
 layer {
@@ -431,7 +431,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 9
+    num_output: 10
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -456,7 +456,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 11
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -482,7 +482,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 3
+    num_output: 4
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -515,11 +515,11 @@ layer {
 }
 
 layer {
-  name: "loss_texture"
+  name: "loss_sleeve"
   type: "SoftmaxWithLoss"
   bottom: "multi_sleeve"
   bottom: "sleeve"
-  top: "loss_cls"
+  top: "loss_sleeve"
   loss_weight: 1
 }
 layer {
@@ -527,13 +527,13 @@ layer {
   type: "SoftmaxWithLoss"
   bottom: "multi_texture"
   bottom: "texture"
-  top: "loss_cls"
+  top: "loss_texture"
   loss_weight: 1
 }layer {
-  name: "loss_texture"
+  name: "loss_neckband"
   type: "SoftmaxWithLoss"
   bottom: "multi_neckband"
   bottom: "neckband"
-  top: "loss_cls"
+  top: "loss_neckband"
   loss_weight: 1
 }

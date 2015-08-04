@@ -122,11 +122,11 @@ class RoIDataLayer(caffe.Layer):
                 top[5].reshape(1, self._num_labels)
             else:
                 self._name_to_top_map['texture'] = 5
-                top[5].reshape(1, self._num_texture)
+                top[5].reshape(1)
                 self._name_to_top_map['neckband'] = 6
-                top[6].reshape(1, self._num_neckband)
+                top[6].reshape(1)
                 self._name_to_top_map['sleeve'] = 7
-                top[7].reshape(1, self._num_sleeve)
+                top[7].reshape(1)
 
 
     def forward(self, bottom, top):
