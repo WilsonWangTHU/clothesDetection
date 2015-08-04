@@ -213,9 +213,10 @@ def im_detect(net, im, boxes):
         labels = labels[inv_index, :]
         return scores, pred_boxes, labels
 
-    labels = np.hstack((blobs_out['texture_score'],
-            blobs_out['neckband_score'],
-            blobs_out['sleeve_score'])).astype(np.float32)
+    labels = \
+        np.hstack((blobs_out['texture_score'][:,1:blobs_out['texture_score'].shape[1]],
+                   blobs_out['neckband_score'][:,1:blobs_out['neckband_score'].shape[1]],
+                   blobs_out['sleeve_score'][:,1:blobs_out['sleeve_score'].shape[1]])).astype(np.float32)
     labels = labels[inv_index, :]
     return scores, pred_boxes, labels
     

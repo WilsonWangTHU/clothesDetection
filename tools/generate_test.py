@@ -29,7 +29,7 @@ neckband_classes = ('圆领', 'V领', '翻领',
 sleeve_classes = ('短袖', '中袖', '长袖')
 
 texture_classes = ('single_color', 'horizon_strip', 'vertical_strip',
-        'error', 'leopard_or_zebra', 'grid',
+        'leopard_or_zebra', 'grid',
         'dot', 'random_match', 'LOGO', 'other'
         )
 neckband_classes = ('round_collar', 'V_collar', 'turn_down_collar',
@@ -329,7 +329,7 @@ def category_test(category, net, args):
     if not cfg.MULTI_LABEL:
         floatwritter.write(str(5) + '\n')
     else:
-        floatwritter.write(str(5 + 23) + '\n')
+        floatwritter.write(str(5 + 22) + '\n')
     intwritter.write(str(top_number * len(image_name)) + '\n')
     intwritter.write(str(1) + '\n')
 
@@ -419,11 +419,11 @@ def category_test(category, net, args):
         else:
             for i in xrange(0, top_number):
                 if i >= results.shape[0]:
-                    for j in xrange(0, 5 + 23):
+                    for j in xrange(0, 5 + 22):
                         floatwritter.write(str(-1) + ' ')
                     intwritter.write(str(-1) + ' ')
                 else:
-                    for j in xrange(0, 5 + 23):
+                    for j in xrange(0, 5 + 22):
                        floatwritter.write(str(results[i, j]) + ' ')
                     intwritter.write(str(results_cls[i, 0]) + ' ')
                 intwritter.write('\n')

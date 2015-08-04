@@ -36,6 +36,7 @@ def get_minibatch(roidb, num_classes, num_labels):
     bbox_loss_blob = np.zeros(bbox_targets_blob.shape, dtype=np.float32)
     if cfg.MULTI_LABEL:
         multi_label_blob = np.zeros((0, num_labels), dtype=np.float32)
+
     # all_overlaps = []
     for im_i in xrange(num_images):
         if cfg.MULTI_LABEL:
@@ -58,7 +59,8 @@ def get_minibatch(roidb, num_classes, num_labels):
         bbox_targets_blob = np.vstack((bbox_targets_blob, bbox_targets))
         bbox_loss_blob = np.vstack((bbox_loss_blob, bbox_loss))
         if cfg.MULTI_LABEL:
-            multi_label_blob = np.vstack((multi_label_blob, multi_label_this))
+            multi_label_blob = \
+                np.vstack((multi_label_blob, multi_label_this))
         # all_overlaps = np.hstack((all_overlaps, overlaps))
 
     # For debug visualizations
@@ -75,19 +77,30 @@ def get_minibatch(roidb, num_classes, num_labels):
         if not cfg.MULTI_LABEL_SOFTMAX:
             blobs['multi_label'] = multi_label_blob
         else:
-            assert multi_label_blob.shape[1] == \
-                    cfg.NUM_MULTI_LABEL_TEXTURE + \
-                    cfg.NUM_MULTI_LABEL_NECKBAND + \
-                    cfg.NUM_MULTI_LABEL_SLEEVE, \
-                    "The number of labels should match!"
-            blobs['texture'] = multi_label_blob[:, 0 : cfg.NUM_MULTI_LABEL_TEXTURE]
-            blobs['neckband'] = multi_label_blob[:, 
-                    cfg.NUM_MULTI_LABEL_TEXTURE : cfg.NUM_MULTI_LABEL_NECKBAND + \
-                            cfg.NUM_MULTI_LABEL_TEXTURE]
-            blobs['sleeve'] = multi_label_blob[:, 
-                    cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
-                    : cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
-                    + cfg.NUM_MULTI_LABEL_SLEEVE]
+            ######
+            # we pick out the ground truth for each multi_label_blobs
+            
+            blobs['texture'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
+            blobs['neckband'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
+            blobs['sleeve'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
+            
+            texture_shape = np.where(multi_label_blob[:, \
+                0 : cfg.NUM_MULTI_LABEL_TEXTURE])   
+            blobs['texture'][texture_shape[0]] = texture_shape[1] + 1
+            
+            neckband_shape = np.where(multi_label_blob[:, \
+                cfg.NUM_MULTI_LABEL_TEXTURE : \
+                cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE])   
+            blobs['neckband'][neckband_shape[0]] = neckband_shape[1] + 1
+            
+            sleeve_shape = np.where(multi_label_blob[:, \
+                cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
+                : cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
+                + cfg.NUM_MULTI_LABEL_SLEEVE])
+            blobs['sleeve'][texture_shape[0]] = sleeve_shape[1] + 1
+            
+            multi_label_blob[0, :]
+            
     return blobs
 
 def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
@@ -138,9 +151,10 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     bbox_targets, bbox_loss_weights = \
             _get_bbox_regression_labels(roidb['bbox_targets'][keep_inds, :],
                                         num_classes)
-    if cfg.MULTI_LABEL:
-        return labels, overlaps, rois, bbox_targets, bbox_loss_weights, multi_labels
-    return labels, overlaps, rois, bbox_targets, bbox_loss_weights
+    if not cfg.MULTI_LABEL:
+        return labels, overlaps, rois, bbox_targets, bbox_loss_weights        
+    
+    return labels, overlaps, rois, bbox_targets, bbox_loss_weights, multi_labels
 
 def _get_image_blob(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified

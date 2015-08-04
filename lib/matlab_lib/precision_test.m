@@ -8,7 +8,8 @@ number_pst_detection = 0;
 number_detection = 0;
 number_recall = 0;
 
-% preprocess, check the size of input and use map_class to denote the class
+
+% preprocess, check the size of input. Use map_class to denote class
 if strcmp(dataset_name, 'forever21')
     % validate the size of input, two datasets are different
     co_size = size(gt_coordinates);
@@ -51,12 +52,12 @@ else
     if strcmp(dataset_name, 'JD')
         % validate the size of input, two datasets are different
         co_size = size(gt_coordinates);
-        if co_size(1) ~= 1 || co_size(2) ~= 5
-            error('The size is unmatched, JD datasets need 1X6 vec !')
+        if co_size(2) < 4
+            error('The size is unmatched, JD datasets need a at least 1X4 vec!')
         end
         % calculate the number of gt
         number_gt = 1;
-
+        
         % calculate the number of detection
         index = find(results_cls ~= -1);  % get the index of positive class
         index = index(results(index, 5) > cfd_threshhold);
@@ -64,14 +65,13 @@ else
         
         % calculate the number of positive detection
         index = find(results_cls == gt_coordinates(5));  % get gt class
-        index = index(results(index, 5) > cfd_threshhold);  
+        index = index(results(index, 5) > cfd_threshhold);
         
         number_pst_detection = IOU_test( ...
             gt_coordinates(1:4), results(index, :), IOU_threshhold);
         if number_pst_detection == 1; number_recall = 1; end
     end
 end
-
 % now the real part after the preprocess
 end
 
