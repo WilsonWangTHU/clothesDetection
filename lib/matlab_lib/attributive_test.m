@@ -4,6 +4,8 @@ function [number_gt, number_pst_detection, ...
     results_class_cfd, cfd_threshhold, IOU_threshhold, attr_length,...
     dataset_name)
 
+% the results_class_cfd is like this: 
+% cls1, cls1_cfd, cls2, cls2_cfd, cls3, cls3_cfd. 
 number_gt = zeros(3, 1);
 number_pst_detection = zeros(3, 1);
 number_detection = zeros(3, 1);
@@ -19,62 +21,39 @@ if strcmp(dataset_name, 'JD')
     if length(gt_coordinates) ~= 4
         error('The size is unmatched, JD datasets need a at least 1X4 vec!')
     end
-    if length(gt_classes) ~= 0
+    if ~isempty(gt_classes)
         for i = 1: 1: length(gt_classes)
             % calculate the number of gt, and the number of detection
             if gt_classes(i) <= attr_length(1)
                 current_cls = 1;  % the texture
-                prediction_id = ...
-                    find(results_class_cfd(:, 2) <= attr_length(1));
             else
                 if gt_classes(i) <= attr_length(2) + attr_length(1)
                     current_cls = 2;  % the neckband
-                    prediction_id = ...
-                        find(results_class_cfd(:, 2) > attr_length(1) ...
-                        && results_class_cfd(:, 2) <= ...
-                        attr_length(2) + attr_length(1));
                 else
-                    current_cls = 3;  % the sleeve                   
-                    prediction_id = ...
-                        find(results_class_cfd(:, 2) > ...
-                        attr_length(1) + attr_length(2));
+                    current_cls = 3;  % the sleeve
                 end
             end
             
             % get the number of gt
             number_gt(current_cls) = 1;
             
-            if ~isempty(prediction_id)
-                detection_id = prediction_id(...
-                    results_class_cfd(prediction_id, 1) > cfd_threshhold);
-                % get the number of detection
-                number_detection(current_cls) = length(detection_id);
-                
+            % get the number of detection
+            detection_id = find(results_class_cfd(:, ...
+                2 * current_cls) > cfd_threshhold);
+            number_detection(current_cls) = length(detection_id);
+            
+            if ~isempty(detection_id)
+                % get the number of positive detection                
                 number_pst_detection(current_cls) = ...
-                    IOU_test(coordinate, det_coordinate, IOU_threshhold);
+                    IOU_test(gt_coordinates, ...
+                    predicted_coordinates(detection_id, :), IOU_threshhold);
             end
-            
-            
-            % get the number of positive detections
-            
+                        
             % get the number of recall
+            if number_pst_detection(current_cls) ~= 0; 
+                number_recall(current_cls) = 1;
+            end
         end
-        % calculate the number of gt
-        number_gt = 1;
-        
-        % calculate the number of detection
-        index = find(results_cls ~= -1);  % get the index of positive class
-        index = index(results(index, 5) > cfd_threshhold);
-        number_detection = length(index);
-        
-        % calculate the number of positive detection
-        index = find(results_cls == gt_coordinates(5));  % get gt class
-        index = index(results(index, 5) > cfd_threshhold);
-        
-        number_pst_detection = IOU_test( ...
-            gt_coordinates(1:4), results(index, :), IOU_threshhold);
-        if number_pst_detection == 1; number_recall = 1; end
-        
     end
 end
 

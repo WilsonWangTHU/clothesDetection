@@ -30,7 +30,7 @@ multilabel_softmax = false;
 sfm_min_cdf = 0;
 sfm_max_cdf = 9.9;
 % some basic test parameters
-step_number = 50;
+step_number = 90;
 switch method
     case 'fast-RCNN',
         min_cfd = 0.60;
@@ -55,10 +55,14 @@ whole = [15, 36];
 if isdir(mat_file_path)
     addpath(mat_file_path)
     addpath([mat_file_path '/../lib/matlab_lib/'])
+    result_save_path = [mat_file_path '/../data/results/result_curve/'];
 else
     addpath([pwd mat_file_path])
     addpath([pwd mat_file_path '/../lib/matlab_lib/'])
+    result_save_path = [pwd mat_file_path '/../data/results/result_curve/'];
 end
+
+fprintf('The results will be saved to %s\n', result_save_path);
 
 number_gt = zeros(step_number, 1);
 number_pst_detection = zeros(step_number, 1);
@@ -103,7 +107,7 @@ if JD_datasets == true
         
         % two different threshhold for the class and attributive are sent
         % in the test function respectively
-        if multilabel_softmax == true
+        if multilabel_softmax == false
             united_cfd_threshhold = [cfd_threshhold, ...
                 (cfd_threshhold - min_cfd) / (max_cfd - min_cfd) * ...
                 (sfm_max_cdf - sfm_min_cdf) + sfm_min_cdf];
@@ -115,30 +119,30 @@ if JD_datasets == true
             if multilabel_test == true
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
-                    number_gt_attr(count), number_pst_detection_attr(count), ...
-                    number_detection_attr(count), number_recall_attr(count), ...
+                    number_gt_attr(count, :), number_pst_detection_attr(count, :), ...
+                    number_detection_attr(count, :), number_recall_attr(count, :), ...
                     ~,~,~,~] ...
                     = ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category);
+                    IOU_threshhold, plot_for_each_category, multilabel_test);
             else
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
                     ~,~,~,~,~,~,~,~] ...
                     = ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category);
+                    IOU_threshhold, plot_for_each_category, multilabel_test);
             end
         else
             if multilabel_test == true
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
-                    number_gt_attr(count), number_pst_detection_attr(count), ...
-                    number_detection_attr(count), number_recall_attr(count), ...
+                    number_gt_attr(count, :), number_pst_detection_attr(count, :), ...
+                    number_detection_attr(count, :), number_recall_attr(count, :), ...
                     cat_number_gt(count, :), ...
                     cat_number_pst_detection(count, :), ...
                     cat_number_detection(count, :),...
                     cat_number_recall(count, :)] = ...
                     ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category);
+                    IOU_threshhold, plot_for_each_category, multilabel_test);
             else
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
@@ -148,55 +152,73 @@ if JD_datasets == true
                     cat_number_detection(count, :),...
                     cat_number_recall(count, :)] = ...
                     ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category);
+                    IOU_threshhold, plot_for_each_category, multilabel_test);
             end
         end
         count = count + 1;
     end
     % plot the results
-    figure
-    plot(number_recall ./ number_gt, ...
-        number_pst_detection ./ number_detection)
-    title(['The precision vs recall figure using ' method ' method in JD'])
-    xlabel('Recall Rate')
-    ylabel('Precision Rate')
+%     figure
+%     plot(number_recall ./ number_gt, ...
+%         number_pst_detection ./ number_detection)
+%     title(['The precision vs recall figure using ' method ' method in JD'])
+%     xlabel('Recall Rate')
+%     ylabel('Precision Rate')
     if plot_for_each_category == true
-        for i = 1: 1: 26 + 3
-            h = figure;
-            plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
-                cat_number_pst_detection(:, i)./ cat_number_detection(:, i))
-            title(['The precision vs recall figure using ' method ' method in JD'])
-            xlabel('Recall Rate')
-            ylabel('Precision Rate')
-            map = ['upper', 'lower', 'whole'];
-            if i > 3
-                file_name = ['/media/Elements/twwang/fast-rcnn/data/' ...
-                    'PR_fig_JD_cat_' num2str(i) '.fig'];
-            else
-                file_name = ['/media/Elements/twwang/fast-rcnn/data/' ...
-                    'PR_fig_JD_cat_' map(i) '.fig'];
-            end
-            grid on; box on;
-            savefig(h, file_name)
-        end
-        % plot them together
+%         for i = 1: 1: 26 + 3
+%             h = figure;
+%             plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
+%                 cat_number_pst_detection(:, i)./ cat_number_detection(:, i))
+%             title(['The precision vs recall figure using ' method ' method in JD'])
+%             xlabel('Recall Rate')
+%             ylabel('Precision Rate')
+%             map = ['upper', 'lower', 'whole'];
+%             if i > 3
+%                 file_name = [result_save_path ...
+%                     'PR_fig_JD_cat_' num2str(i) '.fig'];
+%             else
+%                 file_name = [result_save_path ...
+%                     'PR_fig_JD_cat_' map(i) '.fig'];
+%             end
+%             grid on; box on;
+%             savefig(h, file_name)
+%         end
+%         % plot the class detection results of three big class together
+%         h = figure;
+%         color = ['r', 'g', 'b'];
+%         for i = 1: 1: 3
+%             plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
+%                 cat_number_pst_detection(:, i)./ cat_number_detection(:, i), ...
+%                 color(i))
+%             title(['The precision vs recall figure using ' method ' method in JD'])
+%             xlabel('Recall Rate')
+%             ylabel('Precision Rate')
+%             map = ['upper', 'lower', 'whole'];
+%             hold on;
+%             grid on; box on;
+%         end
+%         file_name = [result_save_path ...
+%             'PR_fig_JD_together.fig'];
+%         legend('upper', 'lower', 'whole')
+%         
+%         savefig(h, file_name)
+%         
+        % plot the detection results of three attributive 
         h = figure;
         color = ['r', 'g', 'b'];
         for i = 1: 1: 3
-            plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
-                cat_number_pst_detection(:, i)./ cat_number_detection(:, i), ...
+            plot(number_recall_attr(:, i) ./ number_gt_attr(:, i), ...
+                number_pst_detection_attr(:, i)./ number_detection_attr(:, i), ...
                 color(i))
-            title(['The precision vs recall figure using ' method ' method in JD'])
+            title(['The precision vs recall of attributive figure using ' method ' method in JD'])
             xlabel('Recall Rate')
             ylabel('Precision Rate')
-            map = ['upper', 'lower', 'whole'];
             hold on;
             grid on; box on;
         end
-        file_name = ['/media/Elements/twwang/fast-rcnn/data/' ...
-            'PR_fig_JD_together.fig'];
-        legend('upper', 'lower', 'whole')
-        
+        file_name = [result_save_path ...
+            'PR_Attributive_fig_JD_together.fig'];
+        legend('Texture', 'Neckband', 'sleeve')
         savefig(h, file_name)
         
     end

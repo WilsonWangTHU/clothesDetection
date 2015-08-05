@@ -52,8 +52,8 @@ else
     if strcmp(dataset_name, 'JD')
         % validate the size of input, two datasets are different
         co_size = size(gt_coordinates);
-        if co_size(2) < 4
-            error('The size is unmatched, JD datasets need a at least 1X4 vec!')
+        if co_size(1) ~= 1 || co_size(2) ~= 5
+            error('The size is unmatched, JD datasets need 1X6 vec !')
         end
         % calculate the number of gt
         number_gt = 1;

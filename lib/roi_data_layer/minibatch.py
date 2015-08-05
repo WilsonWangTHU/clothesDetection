@@ -80,9 +80,9 @@ def get_minibatch(roidb, num_classes, num_labels):
             ######
             # we pick out the ground truth for each multi_label_blobs
             
-            blobs['texture'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
-            blobs['neckband'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
-            blobs['sleeve'] = np.zeros((cfg.TRAIN.BATCH_SIZE), np.float32)
+            blobs['texture'] = np.zeros((multi_label_blob.shape[0]), np.float32)
+            blobs['neckband'] = np.zeros((multi_label_blob.shape[0]), np.float32)
+            blobs['sleeve'] = np.zeros((multi_label_blob.shape[0]), np.float32)
             
             texture_shape = np.where(multi_label_blob[:, \
                 0 : cfg.NUM_MULTI_LABEL_TEXTURE])   
@@ -98,8 +98,6 @@ def get_minibatch(roidb, num_classes, num_labels):
                 : cfg.NUM_MULTI_LABEL_NECKBAND + cfg.NUM_MULTI_LABEL_TEXTURE \
                 + cfg.NUM_MULTI_LABEL_SLEEVE])
             blobs['sleeve'][texture_shape[0]] = sleeve_shape[1] + 1
-            
-            multi_label_blob[0, :]
             
     return blobs
 
@@ -145,6 +143,11 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
         
     # Clamp labels for the background RoIs to 0
     labels[fg_rois_per_this_image:] = 0
+    if cfg.MULTI_LABEL:
+        if not cfg.MULTI_LABEL_SOFTMAX:
+            multi_labels[fg_rois_per_this_image:,:] = -1
+        else:
+            multi_labels[fg_rois_per_this_image:,:] = 0
     overlaps = overlaps[keep_inds]
     rois = rois[keep_inds]
 

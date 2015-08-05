@@ -84,6 +84,9 @@ class RoIDataLayer(caffe.Layer):
                 self._num_texture = layer_params['num_texture']
                 self._num_neckband = layer_params['num_neckband']
                 self._num_sleeve = layer_params['num_sleeve']
+                self._num_labels = self._num_texture - 1 + \
+                    self._num_neckband - 1 + \
+                    self._num_sleeve - 1
 
         # it is a place to consider!!! self._len_label= layer_params['num_classes']
 
