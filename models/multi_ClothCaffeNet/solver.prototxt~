@@ -1,4 +1,4 @@
-train_net: "/media/DataDisk/twwang/fast-rcnn/models/multi_ClothCaffeNet/train_1fc_pool5_multilabel.prototxt"
+train_net: "/media/DataDisk/twwang/fast-rcnn/models/multi_ClothCaffeNet/train_3_softmax_multilabel.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.1

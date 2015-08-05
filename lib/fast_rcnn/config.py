@@ -108,7 +108,7 @@ __C.TEST.BBOX_REG = True
 
 # now for the overall settings ---- by Tingwu Wang
 __C.MULTI_LABEL = True
-__C.MULTI_LABEL_SOFTMAX = True
+__C.MULTI_LABEL_SOFTMAX = False
 __C.NUM_MULTI_LABEL_TEXTURE = 9
 __C.NUM_MULTI_LABEL_SLEEVE = 3
 __C.NUM_MULTI_LABEL_NECKBAND = 10

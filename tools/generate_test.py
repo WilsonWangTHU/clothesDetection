@@ -502,8 +502,7 @@ def parse_args():
     parser.add_argument('--plotImage', dest='plot', help='',
         default='True')
     parser.add_argument('--multi_label', dest='multi_label',
-        help='',
-        default='True')
+        help='', default='True')
 
     args = parser.parse_args()
 
@@ -537,6 +536,8 @@ if __name__ == '__main__':
     # flag
     if cfg.MULTI_LABEL:
         Jingdong_output_dir = Jingdong_output_dir + '_multi_label'
+    if cfg.MULTI_LABEL_SOFTMAX:
+        Jingdong_output_dir = Jingdong_output_dir + '_softmax'
 
     # test for each category
     if args.dataset == 'Jingdong':
