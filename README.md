@@ -1,4 +1,4 @@
-# *Fast* R-CNN: Fast Region-based Convolutional Networks for object detection
+# Fashion AI: Fast Region-based Convolutional Networks for object detection
 
 Created by Ross Girshick at Microsoft Research, Redmond.
 
