@@ -21,11 +21,13 @@ if strcmp(dataset_name, 'JD')
     if length(gt_coordinates) ~= 4
         error('The size is unmatched, JD datasets need a at least 1X4 vec!')
     end
+    record_map = zeros(3, 1);
     if ~isempty(gt_classes)
         for i = 1: 1: length(gt_classes)
             % calculate the number of gt, and the number of detection
             if gt_classes(i) <= attr_length(1)
                 current_cls = 1;  % the texture
+                
             else
                 if gt_classes(i) <= attr_length(2) + attr_length(1)
                     current_cls = 2;  % the neckband
@@ -33,7 +35,9 @@ if strcmp(dataset_name, 'JD')
                     current_cls = 3;  % the sleeve
                 end
             end
-            
+            % we still need to take out the detection when there is no 
+            % according gt! we use this variables
+            record_map(current_cls) = 1;
             % get the number of gt
             number_gt(current_cls) = 1;
             
@@ -55,6 +59,17 @@ if strcmp(dataset_name, 'JD')
             end
         end
     end
+    
+    % the number_detection for class which has no gt
+    for i = 1: 1: length(record_map)
+        % this class has no gt, but we still need the detection
+        if record_map(i) == 0 
+            detection_id = find(results_class_cfd(:, ...
+                2 * i) > cfd_threshhold);
+            number_detection(i) = length(detection_id);
+        end
+    end
+    
 end
 
 function pst_detection = IOU_test( ...

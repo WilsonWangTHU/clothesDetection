@@ -113,6 +113,11 @@ __C.NUM_MULTI_LABEL_TEXTURE = 9
 __C.NUM_MULTI_LABEL_SLEEVE = 3
 __C.NUM_MULTI_LABEL_NECKBAND = 10
 
+# set this on if we only use the upper part for class1 and lower part for class2
+__C.BG_CHOICE = True
+__C.ATTR_CHOICE = True
+__C.ATTR_THRESH = 0.5
+
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
 
@@ -166,7 +171,8 @@ def get_output_dir(imdb_name=None, net=None):
     name_string = '_3CL=' + str(__C.ThreeClass) + \
             '_MUL_LAB=' + str(__C.MULTI_LABEL) + \
             '_SOFTMAX=' + str(__C.MULTI_LABEL_SOFTMAX) + \
-            '_FG_THRESH=' + str(__C.TRAIN.FG_THRESH)
+            '_FG_THRESH=' + str(__C.TRAIN.FG_THRESH) + \
+            'ATTR_REVISE=' + str(__C.ATTR_CHOICE)
     if __C.BALANCED == True:
         name_string = name_string + '_BLC=' + str(__C.BALANCED) + \
                 '_COF=' + str(__C.BALANCED)

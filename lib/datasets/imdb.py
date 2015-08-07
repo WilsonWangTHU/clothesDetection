@@ -8,11 +8,32 @@
 import os
 import os.path as osp
 import PIL
-from utils.cython_bbox import bbox_overlaps
+from utils.cython_bbox import bbox_overlaps, bbox_coverage
 import numpy as np
 import scipy.sparse
 import datasets
 from fast_rcnn.config import cfg
+
+def twentysix2three(class_type):
+    if cfg.DEBUG_CLASS_WHOLE == True:
+        return WHOLE_DEBUGER[class_type]
+        
+    if 1 <= class_type <= 7 \
+            or 9 <= class_type <= 10 \
+            or 12 <= class_type <= 19:
+        # 17 class 1 type
+        out_number = 1
+    else:
+        if class_type == 8 \
+                or class_type == 11 \
+                or class_type == 20:
+            # three class 3 types
+            out_number = 3
+        else:
+            # 7 class 2 type
+            out_number = 2
+    return out_number
+
 
 class imdb(object):
     """Image database."""
@@ -136,51 +157,12 @@ class imdb(object):
         self._image_twentysix_type = self._image_twentysix_type * 2
         self._image_type = self._image_type * 2
 
-    def evaluate_recall(self, candidate_boxes, ar_thresh=0.5):
-        # Record max overlap value for each gt box
-        # Return vector of overlap values
-        gt_overlaps = np.zeros(0)
-        for i in xrange(self.num_images):
-            gt_inds = np.where(self.roidb[i]['gt_classes'] > 0)[0]
-            gt_boxes = self.roidb[i]['boxes'][gt_inds, :]
-
-            boxes = candidate_boxes[i]
-            if boxes.shape[0] == 0:
-                continue
-            overlaps = bbox_overlaps(boxes.astype(np.float),
-                                     gt_boxes.astype(np.float))
-
-            # gt_overlaps = np.hstack((gt_overlaps, overlaps.max(axis=0)))
-            _gt_overlaps = np.zeros((gt_boxes.shape[0]))
-            for j in xrange(gt_boxes.shape[0]):
-                argmax_overlaps = overlaps.argmax(axis=0)
-                max_overlaps = overlaps.max(axis=0)
-                gt_ind = max_overlaps.argmax()
-                gt_ovr = max_overlaps.max()
-                assert(gt_ovr >= 0)
-                box_ind = argmax_overlaps[gt_ind]
-                _gt_overlaps[j] = overlaps[box_ind, gt_ind]
-                assert(_gt_overlaps[j] == gt_ovr)
-                overlaps[box_ind, :] = -1
-                overlaps[:, gt_ind] = -1
-
-            gt_overlaps = np.hstack((gt_overlaps, _gt_overlaps))
-
-        num_pos = gt_overlaps.size
-        gt_overlaps = np.sort(gt_overlaps)
-        step = 0.001
-        thresholds = np.minimum(np.arange(0.5, 1.0 + step, step), 1.0)
-        recalls = np.zeros_like(thresholds)
-        for i, t in enumerate(thresholds):
-            recalls[i] = (gt_overlaps >= t).sum() / float(num_pos)
-        ar = 2 * np.trapz(recalls, thresholds)
-
-        return ar, gt_overlaps, recalls, thresholds
-
     def create_roidb_from_box_list(self, box_list, gt_roidb):
         assert len(box_list) == self.num_images, \
                 'Number of boxes must match number of ground-truth images'
         roidb = []
+
+        # in each images, there is a box list, i.e. the box_list[i]
         for i in xrange(self.num_images):
             boxes = box_list[i]
             num_boxes = boxes.shape[0]  # this is important
@@ -197,14 +179,71 @@ class imdb(object):
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
-                gt_overlaps = bbox_overlaps(boxes.astype(np.float),
-                                            gt_boxes.astype(np.float))
-                argmaxes = gt_overlaps.argmax(axis=1)
+                if not cfg.BG_CHOICE:
+                    gt_overlaps = bbox_overlaps(boxes.astype(np.float),
+                            gt_boxes.astype(np.float), -1)
+                else:
+                    gt_overlaps = bbox_overlaps(boxes.astype(np.float),
+                            gt_boxes.astype(np.float), 
+                            twentysix2three(self.ts_classes[i]))
+
+                argmaxes = gt_overlaps.argmax(axis=1)  # the index for the max gt
                 maxes = gt_overlaps.max(axis=1)
                 I = np.where(maxes > 0)[0]
+
+                # set the max overlaped class, take out the sub max
+                # the gt_overlaps is bbox * gt, while the overlaps is bbox * gt_class
+                # the dim is different
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
+
+                # now for the multi_label (attrbutive part), the idea is similar,
+                # we compute the overlaps (not IOU, actually)
+
+                sleeve_coordinate1 = gt_roidb[i]['sleeve_coordinate1']
+                sleeve_coordinate2 = gt_roidb[i]['sleeve_coordinate2']
+                neckband_coordinate = gt_roidb[i]['neckband_coordinate']
+                
+                active_sleeve1 = bbox_coverage(sleeve_coordinate1.astype(np.float),
+                        gt_boxes.astype(np.float))
+                active_sleeve2 = bbox_coverage(sleeve_coordinate2.astype(np.float),
+                        gt_boxes.astype(np.float))
+                active_neckband = bbox_coverage(neckband_coordinate.astype(np.float),
+                        gt_boxes.astype(np.float))
+                
+                # the multi_label seems to have an error, the [i][multi_label]
+                # could have multiple items!
                 if cfg.MULTI_LABEL == True:
-                    multi_label[I, :] = gt_roidb[i]['multi_label']
+                    if not cfg.ATTR_CHOICE:
+                        multi_label[I, :] = gt_roidb[i]['multi_label'][argmaxes[I]]
+                    else:
+                        # we must check whether the sleeve or the neckband
+                        # is in the bounding box, IOU > 0.5?
+                        argmaxes = active_sleeve1.argmax(axis=1)
+                        maxes = active_sleeve1.max(axis=1)
+                        I = np.where(maxes > cfg.ATTR_THRESH)[0]
+                        multi_label[I, cfg.NUM_MULTI_LABEL_NECKBAND + \
+                                cfg.NUM_MULTI_LABEL_TEXTURE:] = \
+                                gt_roidb[i]['multi_label'][argmaxes[I], \
+                                cfg.NUM_MULTI_LABEL_NECKBAND + \
+                                cfg.NUM_MULTI_LABEL_TEXTURE:]
+                        argmaxes = active_sleeve2.argmax(axis=1)
+                        maxes = active_sleeve2.max(axis=1)
+                        I = np.where(maxes > cfg.ATTR_THRESH)[0]
+                        multi_label[I, cfg.NUM_MULTI_LABEL_NECKBAND + \
+                                cfg.NUM_MULTI_LABEL_TEXTURE:] = \
+                                gt_roidb[i]['multi_label'][argmaxes[I], \
+                                cfg.NUM_MULTI_LABEL_NECKBAND + \
+                                cfg.NUM_MULTI_LABEL_TEXTURE:]
+                        argmaxes = active_neckband.argmax(axis=1)
+                        maxes = active_neckband.max(axis=1)
+                        I = np.where(maxes > cfg.ATTR_THRESH)[0]
+                        multi_label[I, NUM_MULTI_LABEL_TEXTURE : \
+                                cfg.NUM_MULTI_LABEL_TEXTURE + \
+                                cfg.NUM_MULTI_LABEL_NECKBAND] = \
+                                gt_roidb[i]['multi_label'][argmaxes[I], \
+                                cfg.NUM_MULTI_LABEL_TEXTURE: \
+                                cfg.NUM_MULTI_LABEL_NECKBAND + \
+                                cfg.NUM_MULTI_LABEL_TEXTURE]
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
             if cfg.MULTI_LABEL == False:
@@ -224,8 +263,6 @@ class imdb(object):
     def merge_roidbs(a, b):
         assert len(a) == len(b), \
                 "The size of the gt and the fg/bg boxes are not matched?"
-        print('The size of the gt is {}'.format(len(a)))
-        print('The size of the boxes is {}'.format(len(b)))
         for i in xrange(len(a)):
             if i % 1000 == 0:
                 print('Merging the {} th image gt and boxes')

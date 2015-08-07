@@ -26,14 +26,14 @@ test_type_1000 = false;
 multilabel_test = true;
 
 % set this on when testing the softmax attributive retrieval
-multilabel_softmax = false;
+multilabel_softmax = true;
 sfm_min_cdf = 0;
 sfm_max_cdf = 9.9;
 % some basic test parameters
 step_number = 90;
 switch method
     case 'fast-RCNN',
-        min_cfd = 0.60;
+        min_cfd = 0.20;
         max_cfd = 0.99;
     case 'pose',
         min_cfd = -1.1;
@@ -60,6 +60,15 @@ else
     addpath([pwd mat_file_path])
     addpath([pwd mat_file_path '/../lib/matlab_lib/'])
     result_save_path = [pwd mat_file_path '/../data/results/result_curve/'];
+end
+
+% output path
+if multilabel_softmax == true
+    result_save_path = [result_save_path 'multi_label_softmax/'];
+else
+    if multilabel_test == true
+        result_save_path = [result_save_path 'multi_label/'];
+    end
 end
 
 fprintf('The results will be saved to %s\n', result_save_path);
@@ -123,13 +132,15 @@ if JD_datasets == true
                     number_detection_attr(count, :), number_recall_attr(count, :), ...
                     ~,~,~,~] ...
                     = ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category, multilabel_test);
+                    IOU_threshhold, plot_for_each_category, ...
+                    multilabel_test, multilabel_softmax);
             else
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
                     ~,~,~,~,~,~,~,~] ...
                     = ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category, multilabel_test);
+                    IOU_threshhold, plot_for_each_category, ...
+                    multilabel_test, multilabel_softmax);
             end
         else
             if multilabel_test == true
@@ -142,7 +153,8 @@ if JD_datasets == true
                     cat_number_detection(count, :),...
                     cat_number_recall(count, :)] = ...
                     ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category, multilabel_test);
+                    IOU_threshhold, plot_for_each_category, ...
+                    multilabel_test, multilabel_softmax);
             else
                 [number_gt(count), number_pst_detection(count), ...
                     number_detection(count), number_recall(count), ...
@@ -152,57 +164,58 @@ if JD_datasets == true
                     cat_number_detection(count, :),...
                     cat_number_recall(count, :)] = ...
                     ROC_JD_datasets(method, united_cfd_threshhold, ...
-                    IOU_threshhold, plot_for_each_category, multilabel_test);
+                    IOU_threshhold, plot_for_each_category, ...
+                    multilabel_test, multilabel_softmax);
             end
         end
         count = count + 1;
     end
     % plot the results
-%     figure
-%     plot(number_recall ./ number_gt, ...
-%         number_pst_detection ./ number_detection)
-%     title(['The precision vs recall figure using ' method ' method in JD'])
-%     xlabel('Recall Rate')
-%     ylabel('Precision Rate')
+    figure
+    plot(number_recall ./ number_gt, ...
+        number_pst_detection ./ number_detection)
+    title(['The precision vs recall figure using ' method ' method in JD'])
+    xlabel('Recall Rate')
+    ylabel('Precision Rate')
     if plot_for_each_category == true
-%         for i = 1: 1: 26 + 3
-%             h = figure;
-%             plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
-%                 cat_number_pst_detection(:, i)./ cat_number_detection(:, i))
-%             title(['The precision vs recall figure using ' method ' method in JD'])
-%             xlabel('Recall Rate')
-%             ylabel('Precision Rate')
-%             map = ['upper', 'lower', 'whole'];
-%             if i > 3
-%                 file_name = [result_save_path ...
-%                     'PR_fig_JD_cat_' num2str(i) '.fig'];
-%             else
-%                 file_name = [result_save_path ...
-%                     'PR_fig_JD_cat_' map(i) '.fig'];
-%             end
-%             grid on; box on;
-%             savefig(h, file_name)
-%         end
-%         % plot the class detection results of three big class together
-%         h = figure;
-%         color = ['r', 'g', 'b'];
-%         for i = 1: 1: 3
-%             plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
-%                 cat_number_pst_detection(:, i)./ cat_number_detection(:, i), ...
-%                 color(i))
-%             title(['The precision vs recall figure using ' method ' method in JD'])
-%             xlabel('Recall Rate')
-%             ylabel('Precision Rate')
-%             map = ['upper', 'lower', 'whole'];
-%             hold on;
-%             grid on; box on;
-%         end
-%         file_name = [result_save_path ...
-%             'PR_fig_JD_together.fig'];
-%         legend('upper', 'lower', 'whole')
-%         
-%         savefig(h, file_name)
-%         
+        for i = 1: 1: 26 + 3
+            h = figure;
+            plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
+                cat_number_pst_detection(:, i)./ cat_number_detection(:, i))
+            title(['The precision vs recall figure using ' method ' method in JD'])
+            xlabel('Recall Rate')
+            ylabel('Precision Rate')
+            map = ['upper', 'lower', 'whole'];
+            if i > 3
+                file_name = [result_save_path ...
+                    'PR_fig_JD_cat_' num2str(i) '.fig'];
+            else
+                file_name = [result_save_path ...
+                    'PR_fig_JD_cat_' map(i) '.fig'];
+            end
+            grid on; box on;
+            savefig(h, file_name)
+        end
+        % plot the class detection results of three big class together
+        h = figure;
+        color = ['r', 'g', 'b'];
+        for i = 1: 1: 3
+            plot(cat_number_recall(:, i) ./ cat_number_gt(:, i), ...
+                cat_number_pst_detection(:, i)./ cat_number_detection(:, i), ...
+                color(i))
+            title(['The precision vs recall figure using ' method ' method in JD'])
+            xlabel('Recall Rate')
+            ylabel('Precision Rate')
+            map = ['upper', 'lower', 'whole'];
+            hold on;
+            grid on; box on;
+        end
+        file_name = [result_save_path ...
+            'PR_fig_JD_together.fig'];
+        legend('upper', 'lower', 'whole')
+        
+        savefig(h, file_name)
+        
         % plot the detection results of three attributive 
         h = figure;
         color = ['r', 'g', 'b'];

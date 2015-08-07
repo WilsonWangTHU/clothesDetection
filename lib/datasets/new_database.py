@@ -397,6 +397,10 @@ class new_database(datasets.imdb):
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+        if cfg.ATTR_CHOICE:
+            sleeve_coordinate1 = -1 * np.ones((num_objs, 4), dtype=np.uint16)
+            sleeve_coordinate2 = -1 * np.ones((num_objs, 4), dtype=np.uint16)
+            neckband_coordinate = -1 * np.ones((num_objs, 4), dtype=np.uint16)
         if cfg.MULTI_LABEL == True:
             if not cfg.MULTI_LABEL_SOFTMAX:
                 multi_label = \
@@ -482,7 +486,29 @@ class new_database(datasets.imdb):
             if self._neckband_to_label_ind.has_key(label_cls):
                 label_cls = self._neckband_to_label_ind[label_cls]
                 multi_label[0, label_cls] = 1;
+        if cfg.ATTR_CHOICE:
+            for i_neckband in xrange(len(type_objs)):
+                location = type_objs[i_neckband].getElementsByTagName('Location')[0]
+                validation = location.getAttributeNode('SourceQuality').childNodes[0].data
+                if validation != u'Valid':
+                    # this box is useless, error!
+                    continue
+                else:
+                    x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
+                    y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
+                    x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
+                    y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
+        
+                    # make sure the coordinates are within the pic
+                    x1 = min(x1, widths - 1)
+                    x2 = min(x2, widths - 1)
+                    y1 = min(y1, height - 1)
+                    y2 = min(y2, height - 1)
+                    neckband_coordinate[0, :] = \
+                        [min(x1, x2), min(y1, y2), 
+                        max(x1, x2), max(y1, y2)]
 
+        # the sleeve type
         type_objs = data.getElementsByTagName('clothSleeve')
         if len(type_objs) != 0:
             label_type = type_objs[0]
@@ -493,11 +519,50 @@ class new_database(datasets.imdb):
                 label_cls = self._sleeve_to_label_ind[label_cls]
                 multi_label[0, label_cls] = 1;
 
+        # get the attributive location if necessary
+        if cfg.ATTR_CHOICE:
+            for i_sleeve in xrange(len(type_objs)):
+                location = type_objs[i_sleeve].getElementsByTagName('Location')[0]
+                validation = location.getAttributeNode('SourceQuality').childNodes[0].data
+                if validation != u'Valid':
+                    # this box is useless, error!
+                    continue
+                else:
+                    x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))
+                    y1 = float(floor(float(location.getAttributeNode('top').childNodes[0].data)))
+                    x2 = float(floor(float(location.getAttributeNode('right').childNodes[0].data)))
+                    y2 = float(floor(float(location.getAttributeNode('bottom').childNodes[0].data)))
+        
+                    # make sure the coordinates are within the pic
+                    x1 = min(x1, widths - 1)
+                    x2 = min(x2, widths - 1)
+                    y1 = min(y1, height - 1)
+                    y2 = min(y2, height - 1)
+                    if i_sleeve == 1:
+                        sleeve_coordinate1[0, :] = \
+                                [min(x1, x2), min(y1, y2), 
+                                        max(x1, x2), max(y1, y2)]
+                    else:
+                        sleeve_coordinate2[0, :] = \
+                                [min(x1, x2), min(y1, y2), 
+                                        max(x1, x2), max(y1, y2)]
+
+        if not cfg.ATTR_CHOICE:
+            return {'boxes': boxes,
+                    'gt_classes': gt_classes,
+                    'gt_overlaps': overlaps,
+                    'flipped': False,
+                    'multi_label': multi_label}
+
         return {'boxes': boxes,
                 'gt_classes': gt_classes,
                 'gt_overlaps': overlaps,
+                'sleeve_coordinate1': sleeve_coordinate1,
+                'sleeve_coordinate2': sleeve_coordinate2,
+                'neckband_coordinate': neckband_coordinate,
                 'flipped': False,
                 'multi_label': multi_label}
+
 
     def _write_voc_results_file(self, all_boxes):
         use_salt = self.config['use_salt']
