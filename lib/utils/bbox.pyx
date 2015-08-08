@@ -16,7 +16,8 @@ ctypedef np.float_t DTYPE_t
 
 def bbox_overlaps(
         np.ndarray[DTYPE_t, ndim=2] boxes,
-        np.ndarray[DTYPE_t, ndim=2] query_boxes, int type_class):
+        np.ndarray[DTYPE_t, ndim=2] query_boxes,
+        int type_class=-1, float percent=0.5):
     """
     Parameters
     ----------
@@ -83,16 +84,15 @@ def bbox_overlaps(
                         overlaps[n, k] = iw * ih / ua
                         if type_class == 1:
                             # the possible lower part
-                            if boxes[n, 3] - query_boxes[k, 3] > query_boxes[k, 3] - boxes[k, 1]:
+                            if percent * boxes[n, 3] + (1 - percent) * boxes[k, 1] > 2 * query_boxes[k, 3]:
                                 if  2 * query_boxes[k, 0] < boxes[n, 0] + boxes[n, 2] < 2 * query_boxes[k, 2]:
                                     overlaps[n, k] = 0
                         else:
                             if type_class == 2:
-                                if boxes[n, 3] - query_boxes[k, 3] < query_boxes[k, 3] - boxes[k, 1]:
+                                if percent * boxes[n, 3] + (1 - percent) * boxes[k, 1] > 2 * query_boxes[k, 3]:
                                     if  2 * query_boxes[k, 0] < boxes[n, 0] + boxes[n, 2] < 2 * query_boxes[k, 2]:
                                         overlaps[n, k] = 0
                                 # the possible upper part
-
     return overlaps
 
 def bbox_coverage(
@@ -116,7 +116,7 @@ def bbox_coverage(
 
     for k in range(K):
         for n in range(N):
-            if query_boxes[k, 0] > 0:  # if the coordinate doesnt exist, it's set to -1
+            if query_boxes[k, 0] >= 0:  # if the coordinate doesnt exist, it's set to -1
                 iw = (min(boxes[n, 2], query_boxes[k, 2]) -
                     max(boxes[n, 0], query_boxes[k, 0]) + 1)
                 if iw > 0:

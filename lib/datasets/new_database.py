@@ -491,7 +491,7 @@ class new_database(datasets.imdb):
                 location = type_objs[i_neckband].getElementsByTagName('Location')[0]
                 validation = location.getAttributeNode('SourceQuality').childNodes[0].data
                 if validation != u'Valid':
-                    # this box is useless, error!
+                    # this box is useless, continue!
                     continue
                 else:
                     x1 = float(floor(float(location.getAttributeNode('left').childNodes[0].data)))

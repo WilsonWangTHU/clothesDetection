@@ -56,7 +56,7 @@ num_category = 26
 num_class = 3
 
 Jingdong_root_dir = '/media/DataDisk/twwang/fast-rcnn/data/clothesDataset/test'
-Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong'
+Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong_bg'
 
 forever21_data_dir = '/media/DataDisk/twwang/fast-rcnn/data/CCP'
 forever21_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/forever21'

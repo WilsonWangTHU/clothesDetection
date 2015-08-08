@@ -105,6 +105,10 @@ class imdb(object):
     def num_images(self):
       return len(self.image_index)
 
+    @property
+    def image_twentysix_type(self):
+        return self._image_twentysix_type
+        
     def image_path_at(self, i):
         raise NotImplementedError
 
@@ -179,13 +183,18 @@ class imdb(object):
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
+                # debug                
+                #gt_boxes[0,:] = [100, 100, 200, 200]
+                #boxes[0, :] = [150, 200, 170, 220]
                 if not cfg.BG_CHOICE:
                     gt_overlaps = bbox_overlaps(boxes.astype(np.float),
-                            gt_boxes.astype(np.float), -1)
+                            gt_boxes.astype(np.float), -1,
+                            cfg.BG_VALID_THRESH)
                 else:
                     gt_overlaps = bbox_overlaps(boxes.astype(np.float),
                             gt_boxes.astype(np.float), 
-                            twentysix2three(self.ts_classes[i]))
+                            int(twentysix2three(self.image_twentysix_type[i])),
+                            cfg.BG_VALID_THRESH) # twentysix2three(self.ts_classes[i])
 
                 argmaxes = gt_overlaps.argmax(axis=1)  # the index for the max gt
                 maxes = gt_overlaps.max(axis=1)
@@ -203,13 +212,18 @@ class imdb(object):
                 sleeve_coordinate2 = gt_roidb[i]['sleeve_coordinate2']
                 neckband_coordinate = gt_roidb[i]['neckband_coordinate']
                 
-                active_sleeve1 = bbox_coverage(sleeve_coordinate1.astype(np.float),
-                        gt_boxes.astype(np.float))
-                active_sleeve2 = bbox_coverage(sleeve_coordinate2.astype(np.float),
-                        gt_boxes.astype(np.float))
-                active_neckband = bbox_coverage(neckband_coordinate.astype(np.float),
-                        gt_boxes.astype(np.float))
-                
+                active_sleeve1 = bbox_coverage(boxes.astype(np.float),                         
+                        sleeve_coordinate1.astype(np.float))
+                active_sleeve2 = bbox_coverage(boxes.astype(np.float), 
+                        sleeve_coordinate2.astype(np.float))
+                active_neckband = bbox_coverage(boxes.astype(np.float), 
+                        neckband_coordinate.astype(np.float))
+                # load the texture infomation
+                if cfg.MULTI_LABEL:                    
+                    multi_label[I, 0:cfg.NUM_MULTI_LABEL_TEXTURE] = \
+                        gt_roidb[i]['multi_label'][argmaxes[I], \
+                        0:cfg.NUM_MULTI_LABEL_TEXTURE]
+
                 # the multi_label seems to have an error, the [i][multi_label]
                 # could have multiple items!
                 if cfg.MULTI_LABEL == True:
@@ -226,6 +240,7 @@ class imdb(object):
                                 gt_roidb[i]['multi_label'][argmaxes[I], \
                                 cfg.NUM_MULTI_LABEL_NECKBAND + \
                                 cfg.NUM_MULTI_LABEL_TEXTURE:]
+
                         argmaxes = active_sleeve2.argmax(axis=1)
                         maxes = active_sleeve2.max(axis=1)
                         I = np.where(maxes > cfg.ATTR_THRESH)[0]
@@ -234,10 +249,11 @@ class imdb(object):
                                 gt_roidb[i]['multi_label'][argmaxes[I], \
                                 cfg.NUM_MULTI_LABEL_NECKBAND + \
                                 cfg.NUM_MULTI_LABEL_TEXTURE:]
+
                         argmaxes = active_neckband.argmax(axis=1)
                         maxes = active_neckband.max(axis=1)
                         I = np.where(maxes > cfg.ATTR_THRESH)[0]
-                        multi_label[I, NUM_MULTI_LABEL_TEXTURE : \
+                        multi_label[I, cfg.NUM_MULTI_LABEL_TEXTURE : \
                                 cfg.NUM_MULTI_LABEL_TEXTURE + \
                                 cfg.NUM_MULTI_LABEL_NECKBAND] = \
                                 gt_roidb[i]['multi_label'][argmaxes[I], \
