@@ -1,4 +1,0 @@
-$LIB is [lib/librcnntest.so]
-$TEST_BIN is [ bin/predict.exe  bin/predict_single.exe  bin/proposal.exe]
-$TOOL_BIN is []
-g++ -Wall -g -std=c++11 -Iinclude -I../caffe-fast-rcnn/include -I../caffe-fast-rcnn/build/src -I/usr/local/cuda-6.5/include -fpic -o obj/SceneFeatures.o -c src/SceneFeatures.cpp
