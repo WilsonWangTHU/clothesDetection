@@ -528,7 +528,8 @@ if __name__ == '__main__':
     else:
         caffe.set_mode_gpu()
         caffe.set_device(args.gpu_id)
-        net = caffe.Net(prototxt, caffemodel, caffe.TEST)
+    
+    net = caffe.Net(prototxt, caffemodel, caffe.TEST)
 
     print('\n\nLoaded network {:s}'.format(caffemodel))
  

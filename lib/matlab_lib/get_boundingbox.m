@@ -6,10 +6,17 @@
 %   Written by Tingwu Wang, 21.7.2015
 % -------------------------------------------------------------
 
-function coordinates = get_boundingbox(index, pixel_file)
-debug = 0; % set this on to see the different parts for debugging
+function coordinates = get_boundingbox(index, pixel_file, the_data_flag)
+debug = 0;  % set this on to see the different parts for debugging
+if ~exist('the_data_flag', 'var')
+    the_data_flag = false;
+end
 
-load(pixel_file) % the groud truth file is written as: groundtruth
+if the_data_flag
+    groundtruth = pixel_file;
+else
+    load(pixel_file)  % the groud truth file is written as: groundtruth
+end
 
 % the overall box is defined by this 4 variables
 xmax = 0;
@@ -36,7 +43,7 @@ for i_index = 1: 1: length(index)
         if length(rows) >= 2
             ymax = max(max(rows), ymax);
             ymin = min(min(rows), ymin);
-        end 
+        end
     else
         if length(cols) >= 2
             xmax = max(max(cols), xmax);

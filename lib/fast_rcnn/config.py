@@ -133,6 +133,10 @@ __C.DEBUG_CLASS_WHOLE = False
 # we may use 1000 as train set and 1000 as test set
 __C.TESTTYPE1000 = False
 
+# the hdf5 generate parameters
+__C.HDF5_NUM_CLASS = 3
+__C.HDF5_NUM_LABEL = 22
+
 
 # The mapping from image coordinates to feature map coordinates might cause
 # some boxes that are distinct in image space to become identical in feature
