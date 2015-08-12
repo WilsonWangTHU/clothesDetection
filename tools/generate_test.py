@@ -72,7 +72,7 @@ accuracy_perCls_top5_box = np.zeros((num_category), dtype=np.float)
 pred_preCls = np.zeros((26, 26), dtype=np.float)
 
 CONF_THRESH = 0.1
-PLOT_CONF_THRESH = 0.4
+PLOT_CONF_THRESH = 0.6
 PLOT_MULTI_LABEL_THRESH = 0.4
 NMS_THRESH = 0.3
 
@@ -304,7 +304,6 @@ def fowever21test(net, args):
         
     return
     
-    
 def category_test(category, net, args):
 
     # reading the file names in the mapping files
@@ -351,7 +350,8 @@ def category_test(category, net, args):
                     im_detect(net, im, image_proposal[i_image])
 
         timer.toc()
-        print("The running time is {} on the {} th image of categary {}".format(timer.total_time, i_image, category))
+        print("The running time is {} on the {} th image of categary {}"\
+            .format(timer.total_time, i_image, category))
 
         # for each class, we go for a nms
         for cls in xrange(1, num_class + 1):
@@ -483,13 +483,166 @@ def category_test(category, net, args):
     floatwritter.close();
     intwritter.close();
     return
+    
+def general_test(net, input_path):
+    output_dir = input_path + '_result'
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    # Load image one by one
+    image_name = []
+    image_name.extend(os.listdir(input_path))
+    image_name.sort()
+    
+    for i_image in xrange(len(image_name)):
+                
+        timer = Timer()  # time the detection
+        timer.tic()
+        
+        image_file = os.path.join(input_path, image_name[i_image])
+        if not image_file.endswith('.jpg'):
+            continue
+        
+        if not os.path.exists(image_file):
+            continue
+        im = cv2.imread(image_file)
+        if im is None:
+            continue
+        # generate the proposal files        
+        os.system(
+            '/media/DataDisk/twwang/fast-rcnn/rcnn_test/proposals_for_python.sh' \
+            + ' ' + input_path + '/' + image_name[i_image])
+        data = open('/home/twwang/temp_proposal', "rb").read()
+        number_proposals = struct.unpack("i", data[0:4])[0]
+        number_edge = struct.unpack("i", data[4:8])[0]
+        assert number_edge == 4, 'The size is not matched!\n' + \
+            'Note that the first two variables are the number of proposals\n' + \
+            ' and number of coordinates in a box, which is 4 by default\n'
+        number_proposals = min(cfg.NUM_PPS, number_proposals)
+        obj_proposals = np.asarray(struct.unpack(
+            str(number_proposals * 4) + 'f',
+            data[8: 8 + 16 * number_proposals])).reshape(number_proposals, 4)
+            
+        # it is a better idea to set a TEST_MULTI_LABEL
+        if cfg.MULTI_LABEL:
+            scores, boxes, multi_label = \
+                    im_detect(net, im, obj_proposals)
+        else:
+            scores, boxes = \
+                    im_detect(net, im, obj_proposals)
+
+        timer.toc()
+        print("The running time is {} on the {} th image"\
+            .format(timer.total_time, i_image))
+
+        # for each class, we go for a nms
+        for cls in xrange(1, num_class + 1):
+            cls_ind = cls
+            cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
+            cls_scores = scores[:, cls_ind]
+            dets = np.hstack((cls_boxes,
+                cls_scores[:, np.newaxis])).astype(np.float32)
+            keep = nms(dets, NMS_THRESH)
+
+            # keep the needed
+            dets = dets[keep, :]
+            if cfg.MULTI_LABEL:
+                multi_label_this = multi_label[keep, :]
+
+            # get the sorted results
+            inds = np.where(dets[:, -1] >= CONF_THRESH)[0]
+            dets = dets[inds, :]
+            if cfg.MULTI_LABEL:
+                multi_label_this = multi_label_this[inds, :]
+
+            # get the data together
+            cls_line = np.ones((dets.shape[0], 1)) * cls
+
+            if not cfg.MULTI_LABEL:
+                if cls == 1:
+                    results = dets.astype(np.float32)
+                    results_cls = cls_line.astype(np.int32)
+                else:
+                    results = np.vstack((results, dets)).astype(np.float32)
+                    results_cls = \
+                            np.vstack((results_cls, cls_line)).astype(np.int32)
+            else:
+                if cls == 1:
+                    results = \
+                            np.hstack((dets, multi_label_this)).astype(np.float32)
+                    results_cls = cls_line.astype(np.int32)
+                else:
+                    this_result = \
+                            np.hstack((dets, multi_label_this)).astype(np.float32)
+                    results = np.vstack((results, this_result)).astype(np.float32)
+                    results_cls = \
+                            np.vstack((results_cls, cls_line)).astype(np.int32)
+
+
+        # sort the results
+        scores = results[:, 4]
+        order = scores.argsort()[::-1]
+        
+        results = results[order, :]
+        results_cls = results_cls[order, :]
+
+        # plot the image if necessary        
+        if args.plot == False:
+            continue
+        for i in xrange(0, results.shape[0]):            
+            if results[i, 4] < PLOT_CONF_THRESH:
+                continue
+            put_string1, put_string2, put_string3 = get_attributive_string(
+                results[i, 5 : results.shape[1]])
+                
+            if results_cls[i, 0] == 1:
+                cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,255,0), 3)
+                cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                            ',P: ' + str(results[i, 4]),
+                            (results[i, 0], results[i, 1]),
+                            font, 0.8, (0,255,0), 1, 255)
+
+            else:
+                if results_cls[i, 0] == 2:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (255,0,0), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 0.8, (255,0,0), 1, 255)
+                else:
+                    cv2.rectangle(
+                        im,(results[i, 0], results[i, 1]),
+                        (results[i, 2], results[i, 3]),
+                        (0,0,255), 3)
+                    cv2.putText(im, "Cls: " + str(results_cls[i, 0]) + \
+                        ',P: ' + str(results[i, 4]),
+                        (results[i, 0], results[i, 1]),
+                        font, 0.8, (0,0,255), 1, 255)
+                        
+            cv2.putText(im, put_string1,
+                        (results[i, 0], int(results[i, 1] + 30)),
+                        font, 0.8, (255,255,0), 1, 255)
+            cv2.putText(im, put_string2,
+                        (results[i, 0], int(results[i, 1] + 60)),
+                        font, 0.8, (0,255,255), 1, 255)
+            cv2.putText(im, put_string3,
+                        (results[i, 0], int(results[i, 1] + 90)),
+                        font, 0.8, (255,0,255), 1, 255)        
+        cv2.imwrite(os.path.join(output_dir, image_name[i_image]), im)
+
+    return
 
 def parse_args():
     """Parse input arguments."""
     parser = argparse.ArgumentParser(description='test a Fast R-CNN network')
 
     parser.add_argument('--gpu', dest='gpu_id', help='GPU device id to use [0]',
-        default=0, type=int)
+        default=1, type=int)
     parser.add_argument('--cpu', dest='cpu_mode',
         help='Use CPU mode (overrides --gpu)',
         action='store_true')
@@ -546,4 +699,6 @@ if __name__ == '__main__':
             category_test(iNum, net, args)
     if args.dataset == 'forever21':
         fowever21test(net, args)
+    if args.dataset != 'forever21' and args.dataset != 'forever21':
+        general_test(net, args.dataset)
         

@@ -21,6 +21,8 @@ import numpy as np
 import sys
 import os
 import cPickle
+import roi_data_layer.roidb as rdl_roidb
+
 
 def parse_args():
     """
@@ -83,7 +85,8 @@ if __name__ == '__main__':
     
     print('Generating the hdf5 training data')
     # generate the training label datasets
-    
+    bbox_means, bbox_stds = \
+        rdl_roidb.add_bbox_regression_targets(roidb)    
     # get the index of the fetching
     for i in xrange(args.number_of_round):    
         index = np.random.permutation(np.arange(len(roidb)))
