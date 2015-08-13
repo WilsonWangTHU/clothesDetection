@@ -136,6 +136,9 @@ __C.TESTTYPE1000 = False
 # the hdf5 generate parameters
 __C.HDF5_NUM_CLASS = 3
 __C.HDF5_NUM_LABEL = 22
+__C.HDF5_BYPASS_SYS_IM_ROIS = True
+__C.HDF5_IMAGE_HEIGHT = 600
+__C.HDF5_IMAGE_WIDTH = 600
 
 
 # The mapping from image coordinates to feature map coordinates might cause
