@@ -55,7 +55,7 @@ __C.TRAIN.FG_THRESH = 0.5
 # Overlap threshold for a ROI to be considered background (class = 0 if
 # overlap in [LO, HI))
 __C.TRAIN.BG_THRESH_HI = 0.5
-__C.TRAIN.BG_THRESH_LO = 0.1
+__C.TRAIN.BG_THRESH_LO = 0
 
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
@@ -137,8 +137,8 @@ __C.TESTTYPE1000 = False
 __C.HDF5_NUM_CLASS = 3
 __C.HDF5_NUM_LABEL = 22
 __C.HDF5_BYPASS_SYS_IM_ROIS = True
-__C.HDF5_IMAGE_HEIGHT = 600
-__C.HDF5_IMAGE_WIDTH = 600
+__C.HDF5_IMAGE_HEIGHT = 350
+__C.HDF5_IMAGE_WIDTH = 350
 
 
 # The mapping from image coordinates to feature map coordinates might cause

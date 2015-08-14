@@ -12,6 +12,7 @@ import numpy.random as npr
 import cv2
 from fast_rcnn.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
+import os
 
 def get_minibatch(roidb, num_classes, num_labels):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -31,8 +32,10 @@ def get_minibatch(roidb, num_classes, num_labels):
         im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
     else:
         im_blob = []
-        im_blob.append(roidb[0]['images'])
-        im_blob.append(roidb[1]['images'])
+        #im_blob.append(roidb[0]['image'])
+        #im_blob.append(roidb[1]['image'])
+        im_blob.append(os.path.abspath(os.path.join('fast-rcnn', roidb[0]['image'])))
+        im_blob.append(os.path.abspath(os.path.join('fast-rcnn', roidb[1]['image'])))
 
     # Now, build the region of interest and label blobs
     rois_blob = np.zeros((0, 5), dtype=np.float32)
@@ -131,16 +134,16 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
 
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
     bg_inds = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) &
-                       (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
+        (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
     # Compute number of background RoIs to take from this image (guarding
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
     bg_rois_per_this_image = np.minimum(bg_rois_per_this_image,
-                                        bg_inds.size)
+        bg_inds.size)
     # Sample foreground regions without replacement
     if bg_inds.size > 0:
         bg_inds = npr.choice(bg_inds, size=bg_rois_per_this_image,
-                             replace=False)
+            replace=False)
 
     # The indices that we're selecting (both fg and bg)
     keep_inds = np.append(fg_inds, bg_inds)
@@ -215,6 +218,8 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         cls = clss[ind]
         start = 4 * cls
         end = start + 4
+        if bbox_targets[ind, start:end].shape != bbox_target_data[ind, 1:].shape:
+            print 'test'
         bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
         bbox_loss_weights[ind, start:end] = [1., 1., 1., 1.]
     return bbox_targets, bbox_loss_weights
