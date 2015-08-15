@@ -107,8 +107,8 @@ __C.TEST.BBOX_REG = True
 #
 
 # now for the overall settings ---- by Tingwu Wang
-__C.MULTI_LABEL = True
-__C.MULTI_LABEL_SOFTMAX = True
+__C.MULTI_LABEL = False
+__C.MULTI_LABEL_SOFTMAX = False
 __C.NUM_MULTI_LABEL_TEXTURE = 9
 __C.NUM_MULTI_LABEL_SLEEVE = 3
 __C.NUM_MULTI_LABEL_NECKBAND = 10
@@ -116,7 +116,7 @@ __C.NUM_MULTI_LABEL_NECKBAND = 10
 # set this on if we only use the upper part for class1 and lower part for class2
 __C.BG_CHOICE = True
 __C.BG_VALID_THRESH = 0.6 
-__C.ATTR_CHOICE = True
+__C.ATTR_CHOICE = False
 __C.ATTR_THRESH = 0.3
 
 # set this variable to false if we want 26 class

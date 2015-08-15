@@ -1,14 +1,22 @@
 #coding=utf-8
-# --------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Fast rcnn clothes detector
-# Written by Tingwu Wang, from 1, 5, 2015, i.e. the 
-# internship SenseTime, Beijing
+# @Brief: In this function, the raw dataset is written for further uses. The 
+# function is not well organized due to its origianal architecture. We may need
+# to change the lay out in th future.
+# 
+# Written by Tingwu Wang, from 01, 05, 2015, i.e. during the internship in
+# SenseTime, Beijing
 #
-#   The original fast-rcnn detector is under the 
-#   copyright 2015 Microsoft
-#   Licensed under The MIT License 
+# The original fast-rcnn detector is under the 
+#   copyright 2015 Microsoft, licensed under The MIT License 
 #   Written by Ross Girshick
-# --------------------------------------------------------
+#
+# Update: 01/08/2015, the multilabel attributive is added
+# Update: 08/08/2015, a better way to pick the foreground is introduced
+# Update: 14/08/2015, I try to add the CCP and CFD dataset into the dataset
+# -----------------------------------------------------------------------------
+
 from math import floor
 import datasets
 import datasets.new_database
@@ -26,32 +34,19 @@ import struct
 from fast_rcnn.config import cfg
 import sys
 
-''' in this file, we try to enable new database to be used'''
 # this is a debuger to make sure the third class is working
-WHOLE_DEBUGER = { 
-    8 : 1,
-    11 : 2,
-    20: 3
-}
+WHOLE_DEBUGER = {8 : 1, 11 : 2, 20: 3}
 
 def twentysix2three(class_type):
     if cfg.DEBUG_CLASS_WHOLE == True:
         return WHOLE_DEBUGER[class_type]
-        
-    if 1 <= class_type <= 7 \
-            or 9 <= class_type <= 10 \
-            or 12 <= class_type <= 19:
-        # 17 class 1 type
-        out_number = 1
+    if 1 <= class_type <= 7 or 9 <= class_type <= 10 or 12 <= class_type <= 19:
+        out_number = 1  # 17 class 1 type
     else:
-        if class_type == 8 \
-                or class_type == 11 \
-                or class_type == 20:
-            # three class 3 types
-            out_number = 3
+        if class_type == 8 or class_type == 11 or class_type == 20:
+            out_number = 3  # three class 3 types
         else:
-            # 7 class 2 type
-            out_number = 2
+            out_number = 2  # 7 class 2 type
     return out_number
 
 class new_database(datasets.imdb):
@@ -61,9 +56,11 @@ class new_database(datasets.imdb):
         self._devkit_path = self._get_default_path() if devkit_path is None \
             else devkit_path
 
-        # different databases is under the directory of os.path.join(
-        # datasets.ROOT_DIR, 'data', 'clothesDatabase') eg: 
-        # /fast-rcnn/data/clothesDatabase/2015clothes
+        # get the dataset name, it will be useful in the future use
+        self.dataset_name = db_name
+
+        # different data has different path. Note that the JD dataset is 
+        # particular strange and may need some time to understand
         self._data_path = os.path.join(self._devkit_path, db_name)
         self._stage = stage
 
@@ -87,8 +84,8 @@ class new_database(datasets.imdb):
                                   '连帽领', '其他'
                                   )
         self._sleeve_classes = ('短袖', '中袖', '长袖')
-        self._ts_classes = ('__background__', '风衣', '毛呢大衣', '羊毛衫/羊绒衫',
-                              '棉服/羽绒服',  '小西装/短外套',
+        self._ts_classes = ('__background__', '风衣', '毛呢大衣',
+                              '羊毛衫/羊绒衫', '棉服/羽绒服',  '小西装/短外套',
                               '西服', '夹克', '旗袍', '皮衣', '皮草',
                               '婚纱', '衬衫', 'T恤', 'Polo衫', '开衫',
                               '马甲', '男女背心及吊带', '卫衣',
@@ -96,6 +93,7 @@ class new_database(datasets.imdb):
                               '打底裤', '休闲裤', '牛仔裤', '短裤',
                               '卫裤/运动裤'
                               )
+
         # for the three class detection, 1 for upper, 2 for lower, and
         # three for clothes that covers the whole body
         if cfg.ThreeClass == True:
@@ -104,8 +102,6 @@ class new_database(datasets.imdb):
                 self._classes = ('__background__', '8', '11', '20', 'test')
         else:
             self._classes = self._ts_classes
-
-
 
         # the name of the label file extension
         self._label_ext = '.clothInfo'
@@ -134,15 +130,17 @@ class new_database(datasets.imdb):
                         self._len_label)   
                     ))
 
-
-        # the name of the image, the type of the image, and the 
-        # name of its label file
+        # the name of the image, the type of the image, and the name of 
+        # its label file. The index is going to be extended into the image
+        # path. The self._image_type and the self._image_twentysix_type
+        # is useful for the path in the JD data set
+        # The self._image_label is going to be extended into the label
+        # file index
         self._image_index, self._image_type, self._image_label, \
-                self._image_twentysix_type, \
-                = self._load_image_set_index()
+            self._image_twentysix_type, = self._load_dataset_index_and_path()
 
         # Default to roidb handler, it is no more useful now
-        self._roidb_handler = self.selective_search_roidb  
+        self._roidb_handler = self.roidb_loading_interface
 
         # specific config options
         self.config = {'cleanup': True,
@@ -164,63 +162,85 @@ class new_database(datasets.imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(
-                self._data_path, self._stage,
-                str(self._image_twentysix_type[i]),
-                str(self._image_index[i]))
+        if self.dataset_name == 'clothesDataset':
+            image_path = os.path.join(self._data_path, self._stage,
+                str(self._image_twentysix_type[i]), str(self._image_index[i]))
+        else:
+            if self.dataset_name in ['CFD', 'CCP']:
+                image_path = os.path.join(self._devkit_path, self.dataset_name,
+                    'images', self._image_index[i])
+            else:
+                assert self.dataset_name == 'Not implemented', \
+                        "Error! Fashionist not implemented!"
+
         assert os.path.exists(image_path), \
             'image file does not exist: {}{}'.format(image_path, i)
         return image_path
 
-    def _load_image_set_index(self):
+    def _load_dataset_index_and_path(self):
         """
-        Load the indexes listed in this dataset's image set file.
-        there are more than 26 sub files in the system
-        use the type_classes to read all the image!
+        Load the indexes listed in this dataset's image set file.  there 
+        are more than 26 sub files in the system use the type_classes to
+        read all the image!
         """
-        # Example path to image set file:
-        # /home/wtw/fast-rcnn/data/clothesDatabase/train/1
+        # Example path to JD image set file: 
+        # fast-rcnn/data/clothesDataset/train/1/images/xxxx.jpg
+        # fast-rcnn/data/CFD/images/xxxx.jpg
+        # fast-rcnn/data/CCP/images/xxxx.jpg
         image_index = []
         image_type = []
         image_label = []
         image_twentysix_type = []
 
-        class_list = list(xrange(1, len(self._type_classes) + 1))
-        if cfg.BALANCED == True:
-            # append more class three type to balance the datasets
-            # type 8, 11, 20 is the class three, add then to 12 types in all
-            append_list_8 = list(8 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
-            append_list_11 = list(11 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
-            append_list_20 = list(20 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
-            class_list.extend(append_list_8)
-            class_list.extend(append_list_11)
-            class_list.extend(append_list_20)
-        if cfg.DEBUG_CLASS_WHOLE == True:
-            class_list = [8, 11, 20]
+        if self.dataset_name == 'clothesDataset':
+            # load the JD clothes dataset. Note that the dataset is divided in
+            # 25 sub classes, so it is necessary to 
+            class_list = list(xrange(1, len(self._type_classes) + 1))
+            if cfg.BALANCED == True:
+                # append more class three type to balance the datasets
+                # type 8, 11, 20 is the class three, add then to 12 types in all
+                append_list_8 = list(8 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+                append_list_11 = list(11 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+                append_list_20 = list(20 * np.ones(cfg.BALANCED_COF, dtype=np.int32))
+                class_list.extend(append_list_8)
+                class_list.extend(append_list_11)
+                class_list.extend(append_list_20)
+            if cfg.DEBUG_CLASS_WHOLE == True:
+                class_list = [8, 11, 20]
+    
+            for class_type in class_list:
+                # the twenty six type is useful when loading the annotations
+                image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
+                                              'newGUIDMapping.txt')
+                assert os.path.exists(image_set_file), \
+                    'index txt does not exist: {}'.format(image_set_file)
+                with open(image_set_file) as f:
+                    for x in f.readlines():
+                        # when using the three class, it is a different label way
+                        y = x.strip()
+                        image_twentysix_type.append(class_type)
+    
+                        if cfg.ThreeClass == False:
+                            image_type.append(class_type)
+                        else:
+                            image_type.append(twentysix2three(class_type))
+                        if y.find('.jpg') == -1:  # it is not a jpg file
+                            image_label.append(y[y.find('.png') + 1 + 4:])
+                            image_index.append(y[y.find('\\') + 1: y.find('.png')] + '.png')
+                        else:
+                            image_label.append(y[y.find('.jpg') + 1 + 4:])
+                            image_index.append(y[y.find('\\') + 1: y.find('.jpg')] + '.jpg')
+                            
+        else:
+            if self.dataset_name in ['CCP', 'CFD']:
+                image_index.extend(os.listdir(os.path.join(
+                    self._devkit_path, self.dataset_name, 'images')))
+                image_label = image_index
+                image_twentysix_type = image_index
+                image_type = image_index
+            else:
+                assert 1 == 2, 'Fashionist not implemented'
 
-        for class_type in class_list:
-            # the twenty six type is useful when loading the annotations
-            image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
-                                          'newGUIDMapping.txt')
-            assert os.path.exists(image_set_file), \
-                'index txt does not exist: {}'.format(image_set_file)
-            with open(image_set_file) as f:
-                for x in f.readlines():
-                    # when using the three class, it is a different label way
-                    y = x.strip()
-                    image_twentysix_type.append(class_type)
-
-                    if cfg.ThreeClass == False:
-                        image_type.append(class_type)
-                    else:
-                        image_type.append(twentysix2three(class_type))
-                    if y.find('.jpg') == -1:  # it is not a jpg file
-                        image_label.append(y[y.find('.png') + 1 + 4:])
-                        image_index.append(y[y.find('\\') + 1: y.find('.png')] + '.png')
-                    else:
-                        image_label.append(y[y.find('.jpg') + 1 + 4:])
-                        image_index.append(y[y.find('\\') + 1: y.find('.jpg')] + '.jpg')
-                        
         return image_index, image_type, image_label, image_twentysix_type
 
     def _get_default_path(self):
@@ -228,37 +248,7 @@ class new_database(datasets.imdb):
         Return the default path of closes.
         """
         return os.path.join(datasets.ROOT_DIR, 'data')
-
-    def gt_roidb(self):
-        """
-        Return the database of ground-truth regions of interest.
-
-        This function loads/saves from/to a cache file to speed up future calls.
-        """
-        cache_file = os.path.join(self.cache_path, \
-                self.name + '_3CL=' + str(cfg.ThreeClass) + \
-                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
-                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
-                '_BLC=' + str(cfg.BALANCED) + \
-                '_COF=' + str(cfg.BALANCED_COF) + \
-                '_TT1000=' + str(cfg.TESTTYPE1000) + \
-                '_gt_roidb.pkl')
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
-            return roidb
-
-        gt_roidb = [self._load_pascal_annotation(i)
-                    for i in xrange(len(self.image_index))]  # we change the def
-        print 'Finish loading annotations'
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
-
-        return gt_roidb
-
-    def selective_search_roidb(self):
+    def roidb_loading_interface(self):
         """
         Return the database of selective search regions of interest.
         Ground-truth ROIs are also included.
@@ -282,8 +272,8 @@ class new_database(datasets.imdb):
 
         # it is changed, as we are not loading the selective search
         # any more, we used the pre-computed Edge box, it's faster
-        gt_roidb = self.gt_roidb()
-        ss_roidb = self._load_selective_search_roidb(gt_roidb)
+        gt_roidb = self._load_groundtruth_roidb()
+        ss_roidb = self._load_proposal_roidb(gt_roidb)
 
         roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
 
@@ -295,26 +285,75 @@ class new_database(datasets.imdb):
 
         return roidb
 
-    def _load_selective_search_roidb(self, gt_roidb):
+    def _load_groundtruth_roidb(self):
+        """
+        Return the database of ground-truth regions of interest.
+
+        This function loads/saves from/to a cache file to speed up future calls.
+        """
+        cache_file = os.path.join(self.cache_path, \
+                self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+                '_BLC=' + str(cfg.BALANCED) + \
+                '_COF=' + str(cfg.BALANCED_COF) + \
+                '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_gt_roidb.pkl')
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as fid:
+                roidb = cPickle.load(fid)
+            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+            return roidb
+
+        if self.dataset_name == 'clothesDataset':
+            gt_roidb = [self._load_JD_dataset_annotation(i)
+                    for i in xrange(len(self.image_index))]
+        else:
+            assert self.dataset_name in ['CCP', 'CFD'], \
+                    'Fashionist not implemented'
+            gt_roidb = [self._load_CFDCCP_dataset_annotation(i)
+                    for i in xrange(len(self.image_index))]
+        print 'Finish loading annotations'
+        with open(cache_file, 'wb') as fid:
+            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        print 'wrote gt roidb to {}'.format(cache_file)
+        return gt_roidb
+
+    def _load_proposal_roidb(self, gt_roidb):
         box_list = []
         # read data from each sub file, the _image_twentysix_type is 
         # important to clearify the sub directory
         for i in xrange(len(self._image_index)):
             # the first 7 char of index is the 'images\' take it out
-            filename = os.path.join(
-                    self._data_path, self._stage,
+            if self.dataset_name == 'clothesDataset':
+                filename = os.path.join(self._data_path, self._stage,
                     str(self._image_twentysix_type[i]),
                     'proposals', self._image_index[i][7:])
+            else:
+                assert self.dataset_name in ['CCP', 'CFD'], 'Fashionist not implemented!'
+                filename = os.path.join(self._devkit_path, self.dataset_name, 
+                    'proposals', self._image_index[i])
             assert os.path.exists(filename), \
                 'Proposal box data not found at: {}'.format(filename)
             
-            data = open(filename, "rb").read()
-            number_proposals = struct.unpack("i", data[0:4])[0]
-            number_edge = struct.unpack("i", data[4:8])[0]
+            if self.dataset_name in ['CCP', 'CFD']:
+                data = open(filename, "r")
+                number_proposals = int(data.readline())
+                number_edge = int(data.readline())
+                number_proposals = min(cfg.NUM_PPS, number_proposals)
+                raw_data = np.zeros((number_proposals, 4), dtype=np.float32)
+                for i in xrange(number_proposals):
+                    raw_data[i, :] = np.float32(data.readline().strip().split())
+            else:
+                assert 1 == 2, 'Unknown dataset'
+                data = open(filename, "rb").read()
+                number_proposals = struct.unpack("i", data[0:4])[0]
+                number_edge = struct.unpack("i", data[4:8])[0]
             
-            number_proposals = min(cfg.NUM_PPS, number_proposals)
-
-            raw_data = np.asarray(struct.unpack(str(number_proposals * 4) + 'f',data[8: 8 + 16 * number_proposals])).reshape(number_proposals, 4)
+                number_proposals = min(cfg.NUM_PPS, number_proposals)
+                raw_data = np.asarray(struct.unpack(str(number_proposals * 4) \
+                        + 'f', data[8: 8 + 16 * number_proposals])).\
+                        reshape(number_proposals, 4)
 
             box_list.append(raw_data[:, :])
         
@@ -322,69 +361,57 @@ class new_database(datasets.imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-    def selective_search_IJCV_roidb(self):
-        """
-        Return the database of selective search regions of interest.
-        Ground-truth ROIs are also included.
-
-        This function loads/saves from/to a cache file to speed up future calls.
-        """
-        cache_file = os.path.join(self.cache_path,
-                                  '{:s}_selective_search_IJCV_top_{:d}_roidb.pkl'.
-                                  format(self.name, self.config['top_k']))
-
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
-            return roidb
-
-        gt_roidb = self.gt_roidb()
-        ss_roidb = self._load_selective_search_IJCV_roidb(gt_roidb)
-        roidb = datasets.imdb.merge_roidbs(gt_roidb, ss_roidb)
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
-
-        return roidb
-
-    def _load_selective_search_IJCV_roidb(self, gt_roidb):
-        IJCV_path = os.path.abspath(os.path.join(self.cache_path, '..',
-                                                 'selective_search_IJCV_data',
-                                                 'voc_' + self._year))
-        assert os.path.exists(IJCV_path), \
-            'Selective search IJCV data not found at: {}'.format(IJCV_path)
-
-        top_k = self.config['top_k']
-        box_list = []
-        for i in xrange(self.num_images):
-            filename = os.path.join(IJCV_path, self.image_index[i] + '.mat')
-            raw_data = sio.loadmat(filename)
-            box_list.append((raw_data['boxes'][:top_k, :] - 1).astype(np.uint16))
-
-        return self.create_roidb_from_box_list(box_list, gt_roidb)
-
-    def _load_pascal_annotation(self, i):
-        """
-        Load image and bounding boxes info from XML file in the PASCAL VOC
-        format.
-        """
+    def _load_CFDCCP_dataset_annotation(self, i):
         if i % 100 == 0: 
             print("Now loading annotations of the {} th image".format(i))
-        filename = os.path.join(
-                self._data_path, self._stage,
+        mat_file_name = self._image_label[i][:self._image_label[i].find('.')] \
+                + '.mat'
+        filename = os.path.join(self._devkit_path, self.dataset_name, 
+                'bounding_box', mat_file_name)
+        raw_data = sio.loadmat(filename)['coordinates']
+        assert raw_data.shape[0] == 4 and raw_data.shape[1] == 5, \
+                "The proposal mat file seems to be broke at {}"\
+                .format(filename)
+
+        # get the number of groundtruth objects in the data
+        num_objs = np.where(raw_data[:,2] < raw_data[:,4])[0].shape[0]
+
+        boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+        gt_classes = np.zeros((num_objs), dtype=np.int32)
+        overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+
+
+        # they are just for compatibility purpose
+        assert cfg.ATTR_CHOICE == False and cfg.MULTI_LABEL == False \
+            and cfg.MULTI_LABEL_SOFTMAX == False, \
+            "Only the JD clothesDataset support MULTI_LABEL and ATTR_CHOICE"
+
+        obj_counter = 0
+        for ind in np.where(raw_data[:,2] < raw_data[:,4])[0]:
+            # load each gt class class and its coordinates
+            boxes[obj_counter, :] = raw_data[ind, 1:]
+            gt_classes[obj_counter] = raw_data[ind, 0]
+            overlaps[obj_counter, raw_data[ind, 0]] = 1.0
+
+            obj_counter = obj_counter + 1
+        overlaps = scipy.sparse.csr_matrix(overlaps)
+        return {'boxes' : boxes,
+                'gt_classes': gt_classes,
+                'gt_overlaps' : overlaps,
+                'flipped' : False}
+
+    def _load_JD_dataset_annotation(self, i):
+        # Load image and bounding boxes info from the JD dataset XML file
+        if i % 100 == 0: 
+            print("Now loading annotations of the {} th image".format(i))
+        filename = os.path.join(self._data_path, self._stage,
                 str(self._image_twentysix_type[i]),
-                'Label',
-                self._image_label[i] + self._label_ext)
+                'Label', self._image_label[i] + self._label_ext)
         # read the width and height of the image make sure the annotation
         # is within the picture
         im = PIL.Image.open(self.image_path_at(i))
         widths = im.size[0]
         height = im.size[1]
-
-        # a useless function, it is out of service
-        def get_data_from_tag(node, tag):
-            return node.getElementsByTagName(tag)[0].childNodes[0].data
 
         with open(filename) as f:
             data = minidom.parseString(f.read())
@@ -562,52 +589,6 @@ class new_database(datasets.imdb):
                 'neckband_coordinate': neckband_coordinate,
                 'flipped': False,
                 'multi_label': multi_label}
-
-
-    def _write_voc_results_file(self, all_boxes):
-        use_salt = self.config['use_salt']
-        comp_id = 'comp4'
-        if use_salt:
-            comp_id += '-{}'.format(os.getpid())
-
-        # VOCdevkit/results/VOC2007/Main/comp4-44503_det_test_aeroplane.txt
-        path = os.path.join(self._devkit_path, 'results', 'VOC' + self._year,
-                            'Main', comp_id + '_')
-        for cls_ind, cls in enumerate(self.classes):
-            if cls == '__background__':
-                continue
-            print 'Writing {} VOC results file'.format(cls)
-            filename = path + 'det_' + self._image_set + '_' + cls + '.txt'
-            with open(filename, 'wt') as f:
-                for im_ind, index in enumerate(self.image_index):
-                    dets = all_boxes[cls_ind][im_ind]
-                    if dets == []:
-                        continue
-                    # the VOCdevkit expects 1-based indices
-                    for k in xrange(dets.shape[0]):
-                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
-                                format(index, dets[k, -1],
-                                       dets[k, 0] + 1, dets[k, 1] + 1,
-                                       dets[k, 2] + 1, dets[k, 3] + 1))
-        return comp_id
-
-    def _do_matlab_eval(self, comp_id, output_dir='output'):
-        rm_results = self.config['cleanup']
-
-        path = os.path.join(os.path.dirname(__file__),
-                            'VOCdevkit-matlab-wrapper')
-        cmd = 'cd {} && '.format(path)
-        cmd += '{:s} -nodisplay -nodesktop '.format(datasets.MATLAB)
-        cmd += '-r "dbstop if error; '
-        cmd += 'voc_eval(\'{:s}\',\'{:s}\',\'{:s}\',\'{:s}\',{:d}); quit;"' \
-               .format(self._devkit_path, comp_id,
-                       self._image_set, output_dir, int(rm_results))
-        print('Running:\n{}'.format(cmd))
-        status = subprocess.call(cmd, shell=True)
-
-    def evaluate_detections(self, all_boxes, output_dir):
-        comp_id = self._write_voc_results_file(all_boxes)
-        self._do_matlab_eval(comp_id, output_dir)
 
     def competition_mode(self, on):
         if on:

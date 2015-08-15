@@ -33,7 +33,7 @@ def bbox_overlaps(
     cdef DTYPE_t iw, ih, box_area
     cdef DTYPE_t ua
     cdef unsigned int k, n
-
+    print "We are in the function!!!!!!!!!!"
     if type_class == -1 :
         # the default one, ignore the type of class
         for k in range(K):

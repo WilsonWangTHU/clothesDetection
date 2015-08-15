@@ -130,9 +130,11 @@ class imdb(object):
         num_images = self.num_images
         # I find something big! the PIL open has mistake!,making 
 		# width = 349
-        # widths = [PIL.Image.open(self.image_path_at(i)).\
-        # size[0] for i in xrange(num_images)]
-        widths = [350 for i in xrange(num_images)]
+        if self.name != 'clothesDataset':        
+            widths = [PIL.Image.open(self.image_path_at(i)).\
+                size[0] for i in xrange(num_images)]
+        else:
+            widths = [350 for i in xrange(num_images)]
         for i in xrange(num_images):
             boxes = self.roidb[i]['boxes'].copy()
             
@@ -183,41 +185,52 @@ class imdb(object):
             if gt_roidb is not None:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
-                # debug                
-                #gt_boxes[0,:] = [100, 100, 200, 200]
-                #boxes[0, :] = [150, 200, 170, 220]
                 if not cfg.BG_CHOICE:
                     gt_overlaps = bbox_overlaps(boxes.astype(np.float),
                             gt_boxes.astype(np.float), -1,
                             cfg.BG_VALID_THRESH)
                 else:
-                    gt_overlaps = bbox_overlaps(boxes.astype(np.float),
-                            gt_boxes.astype(np.float), 
-                            int(twentysix2three(self.image_twentysix_type[i])),
-                            cfg.BG_VALID_THRESH) # twentysix2three(self.ts_classes[i])
+                    # in this case, we have multiple gt
+                    if self._name != 'clothesDataset':
+                        gt_overlaps = np.zeros((boxes.shape[0], 0), dtype=np.float32)
 
+                        for i_gt in xrange(gt_classes.shape[0]):
+                            gt_overlaps_this_class = \
+                                bbox_overlaps(boxes.astype(np.float),
+                                    gt_boxes[i_gt, :].reshape(1, -1).astype(np.float), 
+                                    gt_classes[i_gt], cfg.BG_VALID_THRESH)
+                            gt_overlaps = np.hstack((gt_overlaps, 
+                                gt_overlaps_this_class)).astype(np.float32)     
+                    else:
+                        gt_overlaps = bbox_overlaps(boxes.astype(np.float),
+                                gt_boxes.astype(np.float), 
+                                int(twentysix2three(self.image_twentysix_type[i])),
+                                cfg.BG_VALID_THRESH) # twentysix2three(self.ts_classes[i])
+                                
+                assert gt_overlaps.shape[0] != 0 and gt_overlaps.shape[1] != 0, \
+                    'We dont take invalid image, the image is {}'.\
+                    format(self._image_index[i])
+                    # set the max overlaped class, take out the sub max
+                    # the gt_overlaps is bbox * gt, while the overlaps is bbox * gt_class
+                    # the dim is different
                 argmaxes = gt_overlaps.argmax(axis=1)  # the index for the max gt
                 maxes = gt_overlaps.max(axis=1)
                 I = np.where(maxes > 0)[0]
-
-                # set the max overlaped class, take out the sub max
-                # the gt_overlaps is bbox * gt, while the overlaps is bbox * gt_class
-                # the dim is different
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
 
                 # now for the multi_label (attrbutive part), the idea is similar,
                 # we compute the overlaps (not IOU, actually)
-
-                sleeve_coordinate1 = gt_roidb[i]['sleeve_coordinate1']
-                sleeve_coordinate2 = gt_roidb[i]['sleeve_coordinate2']
-                neckband_coordinate = gt_roidb[i]['neckband_coordinate']
-                
-                active_sleeve1 = bbox_coverage(boxes.astype(np.float),                         
-                        sleeve_coordinate1.astype(np.float))
-                active_sleeve2 = bbox_coverage(boxes.astype(np.float), 
-                        sleeve_coordinate2.astype(np.float))
-                active_neckband = bbox_coverage(boxes.astype(np.float), 
-                        neckband_coordinate.astype(np.float))
+                if cfg.MULTI_LABEL and cfg.ATTR_CHOICE:
+                    sleeve_coordinate1 = gt_roidb[i]['sleeve_coordinate1']
+                    sleeve_coordinate2 = gt_roidb[i]['sleeve_coordinate2']
+                    neckband_coordinate = gt_roidb[i]['neckband_coordinate']
+                    
+                    active_sleeve1 = bbox_coverage(boxes.astype(np.float),                         
+                            sleeve_coordinate1.astype(np.float))
+                    active_sleeve2 = bbox_coverage(boxes.astype(np.float), 
+                            sleeve_coordinate2.astype(np.float))
+                    active_neckband = bbox_coverage(boxes.astype(np.float), 
+                            neckband_coordinate.astype(np.float))
                 # load the texture infomation
                 if cfg.MULTI_LABEL:                    
                     multi_label[I, 0:cfg.NUM_MULTI_LABEL_TEXTURE] = \
