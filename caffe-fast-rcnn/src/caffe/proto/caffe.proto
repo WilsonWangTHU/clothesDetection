@@ -260,6 +260,7 @@ message ParamSpec {
 // Update the next available ID when you add a new LayerParameter field.
 //
 // LayerParameter next available layer-specific ID: 132 (last added: prelu_param)
+// LayerParameter next available layer-specific ID: 133 (last added: hdf5_general_data_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -313,7 +314,10 @@ message LayerParameter {
   optional EltwiseParameter eltwise_param = 110;
   optional ExpParameter exp_param = 111;
   optional HDF5DataParameter hdf5_data_param = 112;
+
   optional HDF5OutputParameter hdf5_output_param = 113;
+  optional HDF5GeneralDataParameter hdf5_general_data_param = 132;
+
   optional HingeLossParameter hinge_loss_param = 114;
   optional ImageDataParameter image_data_param = 115;
   optional InfogainLossParameter infogain_loss_param = 116;
@@ -527,6 +531,24 @@ message HDF5DataParameter {
   // data are output (in a random order) before moving onto another file.
   optional bool shuffle = 3 [default = false];
 }
+
+// Message that stores parameters used by HDF5GeneralDataLayer
+message HDF5GeneralDataParameter {
+  // Specify the data source.
+  optional string source = 1;
+  // Specify the batch size.
+  optional uint32 batch_size = 2;
+
+  // Specify whether to shuffle the data.
+  // If shuffle == true, the ordering of the HDF5 files is shuffled,
+  // and the ordering of data within any given HDF5 file is shuffled,
+  // but data between different files are not interleaved; all of a file's
+  // data are output (in a random order) before moving onto another file.
+  optional bool shuffle = 3 [default = false];
+  repeated string field = 4;
+  repeated string datatype = 5;
+}
+
 
 // Message that stores parameters used by HDF5OutputLayer
 message HDF5OutputParameter {
@@ -836,6 +858,7 @@ message V1LayerParameter {
     THRESHOLD = 31;
     MULTI_LABEL_ACCURACY = 36;
     MULTI_LABEL_LOSS = 37;
+    HDF5_GENERAL_DATA = 38;
   }
   optional LayerType type = 5;
   repeated BlobProto blobs = 6;

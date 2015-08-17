@@ -20,6 +20,8 @@
 
 namespace caffe {
 
+#define HDF5_DATA_DATASET_NAME "data"
+#define HDF5_DATA_LABEL_NAME "label"
 /**
  * @brief Provides base for data layers that feed blobs to the Net.
  *
@@ -173,6 +175,55 @@ class HDF5DataLayer : public Layer<Dtype> {
   std::vector<shared_ptr<Blob<Dtype> > > hdf_blobs_;
   std::vector<unsigned int> data_permutation_;
   std::vector<unsigned int> file_permutation_;
+};
+
+/**
+ * @brief Provides data of different format (int8 for now) to the Net from HDF5 files.
+ *
+ */
+template <typename Dtype>
+class HDF5GeneralDataLayer : public Layer<Dtype> {
+ public:
+  explicit HDF5GeneralDataLayer(const LayerParameter& param)
+      : Layer<Dtype>(param) {}
+  virtual ~HDF5GeneralDataLayer();
+  virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  // Data layers have no bottoms, so reshaping is trivial.
+  virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top) {}
+
+  virtual inline const char* type() const { return "HDF5GeneralData"; }
+  virtual inline int ExactNumBottomBlobs() const { return 0; }  
+  virtual inline int MinTopBlobs() const { return 1; }
+
+  //virtual inline int ExactNumTopBlobs() const { return -1; }
+
+ protected:
+  virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
+  virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {}
+  virtual void LoadGeneralHDF5FileData(const char* filename);
+  
+  std::vector<std::string> hdf_filenames_;
+  unsigned int num_files_;
+  unsigned int current_file_;
+  hsize_t current_row_;
+  std::vector<shared_ptr<Blob<Dtype> > > hdf_blobs_;
+  std::vector<unsigned int> data_permutation_;
+  std::vector<unsigned int> file_permutation_;
+
+  //std::vector<shared_ptr<Blob<Dtype> > > hdf_filenames_;
+  //unsigned int num_files_;
+  //unsigned int current_file_;
+  //hsize_t current_row_;
+  //vector<Blob<Dtype>*> hdf_blobs_;
+  //Blob<Dtype> label_blob_;
 };
 
 /**

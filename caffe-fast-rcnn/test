@@ -1,0 +1,56 @@
+NVCC src/caffe/layers/hdf5_general_data_layer.cu
+./include/caffe/data_layers.hpp(188): warning: function "caffe::Layer<Dtype>::LayerSetUp(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::LayerSetUp [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(191): warning: function "caffe::Layer<Dtype>::Reshape(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Reshape [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(199): warning: function "caffe::Layer<Dtype>::Forward_cpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Forward_cpu [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(201): warning: function "caffe::Layer<Dtype>::Forward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Forward_gpu [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(203): warning: function "caffe::Layer<Dtype>::Backward_cpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<__nv_bool, std::allocator<__nv_bool>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Backward_cpu [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(205): warning: function "caffe::Layer<Dtype>::Backward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<__nv_bool, std::allocator<__nv_bool>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=float]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Backward_gpu [with Dtype=float]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=float]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+src/caffe/layers/hdf5_general_data_layer.cu(59): error: declaration is incompatible with "void caffe::HDF5GeneralDataLayer<Dtype>::Forward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> *) [with Dtype=float]"
+./include/caffe/data_layers.hpp(201): here
+
+./include/caffe/data_layers.hpp(188): warning: function "caffe::Layer<Dtype>::LayerSetUp(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::LayerSetUp [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(191): warning: function "caffe::Layer<Dtype>::Reshape(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Reshape [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(199): warning: function "caffe::Layer<Dtype>::Forward_cpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Forward_cpu [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(201): warning: function "caffe::Layer<Dtype>::Forward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Forward_gpu [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(203): warning: function "caffe::Layer<Dtype>::Backward_cpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<__nv_bool, std::allocator<__nv_bool>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Backward_cpu [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+./include/caffe/data_layers.hpp(205): warning: function "caffe::Layer<Dtype>::Backward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, const std::vector<__nv_bool, std::allocator<__nv_bool>> &, const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &) [with Dtype=double]" is hidden by "caffe::HDF5GeneralDataLayer<Dtype>::Backward_gpu [with Dtype=double]" -- virtual function override intended?
+          detected during instantiation of class "caffe::HDF5GeneralDataLayer<Dtype> [with Dtype=double]" 
+src/caffe/layers/hdf5_general_data_layer.cu(59): here
+
+src/caffe/layers/hdf5_general_data_layer.cu(59): error: declaration is incompatible with "void caffe::HDF5GeneralDataLayer<Dtype>::Forward_gpu(const std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> &, std::vector<caffe::Blob<Dtype> *, std::allocator<caffe::Blob<Dtype> *>> *) [with Dtype=double]"
+./include/caffe/data_layers.hpp(201): here
+
+2 errors detected in the compilation of "/tmp/tmpxft_0000572c_00000000-15_hdf5_general_data_layer.compute_50.cpp1.ii".
