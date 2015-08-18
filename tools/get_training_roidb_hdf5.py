@@ -43,6 +43,9 @@ def parse_args():
     parser.add_argument('--output', dest='output_dir',
                         help='dataset to train on',
                         default='', type=str)
+    parser.add_argument('--merge', dest='merge',
+                        help='set this on, when we want to merge CFD, CCP, Fashionista',
+                        default=False, type=bool)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -111,7 +114,6 @@ if __name__ == '__main__':
     args = parse_args()
 
     print('Starting to generate the fast-rcnn training roidb hdf5')
-
     print('Called with args:')
     print(args)
 
@@ -119,45 +121,94 @@ if __name__ == '__main__':
     print('Using config:')
     pprint.pprint(cfg)
 
-    
-    cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
-    cache_file = os.path.join(cache_path, \
-        args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
-        '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
-        '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
-        '_BLC=' + str(cfg.BALANCED) + \
-        '_COF=' + str(cfg.BALANCED_COF) + \
-        '_TT1000=' + str(cfg.TESTTYPE1000) + \
-        '_solver_roidb.pkl')
-    
+ 
+    # the output directory
     if args.output_dir == '':
         output_dir = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'hdf5'))
     else:
         output_dir = args.output_dir
-    if not 'roidb' in globals():
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                origin_roidb = cPickle.load(fid)
-                print('The precomputed roidb datasets loaded')
-                bbox_means, bbox_stds = \
-                    rdl_roidb.add_bbox_regression_targets(origin_roidb)    
-        else:
-            imdb = get_imdb(args.imdb_name)
-            print('No cache file spotted. Making one from the scratch')
-            print('Loaded dataset `{:s}`'.format(imdb.name))
-            origin_roidb = get_training_roidb(imdb)
-            
-            with open(cache_file, 'wb') as fid:
-                cPickle.dump(origin_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-            print('The precomputed roidb saved to {}'.format(cache_file))
-            bbox_means, bbox_stds = \
-                rdl_roidb.add_bbox_regression_targets(origin_roidb)    
-    print('Generating the hdf5 training data')
-    # generate the training label datasets
+
+    cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
     
-    # get the index of the fetching
-    # devide the dataset into 4 part
-    part_num = 17
+    if args.merge:
+        assert args.imdb_name == 'CCP_CFD_Fashionista', \
+                'We could only merge three dataset together!'
+        
+        loaded_flag = False
+        if 'origin_roidb' in globals():
+            if len(origin_roidb) != 0:
+                loaded_flag = True
+
+        this_dataset_roidb = dict()
+        if not loaded_flag:
+            for i_database_name in ['CCP', 'CFD', 'Fashionista']:
+                cache_file = os.path.join(cache_path, \
+                    i_database_name + '_train' + '_3CL=' + str(cfg.ThreeClass) + \
+                    '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                    '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+                    '_BLC=' + str(cfg.BALANCED) + \
+                    '_COF=' + str(cfg.BALANCED_COF) + \
+                    '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                    '_solver_roidb.pkl')
+                if os.path.exists(cache_file):
+                    with open(cache_file, 'rb') as fid:
+                        this_dataset_roidb[i_database_name] = cPickle.load(fid)
+                else:
+                    imdb = get_imdb(i_database_name + '_train')
+                    print('No cache file spotted. Making one from the scratch')
+                    print('Loaded dataset `{:s}`'.format(i_database_name))
+                    this_dataset_roidb[i_database_name] = get_training_roidb(imdb)
+                    with open(cache_file, 'wb') as fid:
+                        cPickle.dump(
+                            this_dataset_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+                        print('The precomputed roidb saved to {}'.format(cache_file))
+                print('The precomputed {} roidb datasets loaded'.\
+                    format(i_database_name))
+            
+            origin_roidb = []
+            for i_database_name in ['CCP', 'CFD', 'Fashionista']:
+                origin_roidb.extend(this_dataset_roidb[i_database_name])
+
+        bbox_means, bbox_stds = \
+            rdl_roidb.add_bbox_regression_targets(origin_roidb)    
+        print('Generating the hdf5 training data')
+    else:
+        cache_file = os.path.join(cache_path, \
+            args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
+            '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+            '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+            '_BLC=' + str(cfg.BALANCED) + \
+            '_COF=' + str(cfg.BALANCED_COF) + \
+            '_TT1000=' + str(cfg.TESTTYPE1000) + \
+            '_solver_roidb.pkl')
+        if not 'origin_roidb' in globals():
+            if os.path.exists(cache_file):
+                with open(cache_file, 'rb') as fid:
+                    origin_roidb = cPickle.load(fid)
+                    print('The precomputed roidb datasets loaded')
+            else:
+                imdb = get_imdb(args.imdb_name + '_train')
+                print('No cache file spotted. Making one from the scratch')
+                print('Loaded dataset `{:s}`'.format(imdb.name))
+                origin_roidb = get_training_roidb(imdb)
+            
+                with open(cache_file, 'wb') as fid:
+                    cPickle.dump(origin_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+                print('The precomputed roidb saved to {}'.format(cache_file))
+        bbox_means, bbox_stds = \
+            rdl_roidb.add_bbox_regression_targets(origin_roidb)    
+        print('Generating the hdf5 training data')
+    
+    # get the index of the fetching divide the dataset into 17 part
+    if not args.merge:
+        file = open(os.path.join(ROOT_DIR, 'models', 'hdf5_multi_ClothCaffeNet', 
+            'data', 'JD_training_set.txt'), 'w')
+        part_num = 17
+    else:
+        file = open(os.path.join(ROOT_DIR, 'models', 'hdf5_multi_ClothCaffeNet', 
+            'data', 'merge_dataset.txt'), 'w')
+        part_num = 1
+
     for i_round in xrange(args.number_of_round):
         for i_part in xrange(part_num):
             step = int(len(origin_roidb) / part_num)
@@ -168,32 +219,34 @@ if __name__ == '__main__':
             
             # the multi_label_softmax, we store the below datasets
             # 1. data blob, 
-            file_image = h5py.File(os.path.join(output_dir, 'image' + \
-                '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
+            if not args.merge:
+                file.write(os.path.join(output_dir, 'image' + '_' + \
+                    str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5\n'))
+                fast_rcnn_dataset = h5py.File(os.path.join(output_dir, 'image' + \
+                        '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
+            else:
+                file.write(os.path.join(output_dir, 'merge_dataset' + '_' + \
+                    str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5\n'))
+                fast_rcnn_dataset = h5py.File(os.path.join(output_dir, 'merge_dataset' + \
+                    '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
+                
             image_data = np.zeros(((1 * len(roidb), 3, cfg.HDF5_IMAGE_WIDTH, 
                                     cfg.HDF5_IMAGE_HEIGHT)), dtype=np.uint8)
        
-             # 2. multi_label blob
-            file_multilabel = h5py.File(os.path.join(output_dir, 'multi_label' + \
-                '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
-            neckband_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
-            texture_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
-            sleeve_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
+            # 2. multi_label blob
+            if not args.merge:
+                neckband_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
+                texture_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
+                sleeve_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
                                              
             # 3. rois blob, 
-            file_rois = h5py.File(os.path.join(output_dir, 'rois' + \
-                '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
             rois_data = np.zeros(((64 * len(roidb), 5, 1, 1)), dtype=np.float32)
             
             # 4. bbox_tartgets, bbox_loss_weight
-            file_bbox = h5py.File(os.path.join(output_dir, 'bbox' + \
-                '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
             bbox_targets_data = np.zeros(((64 * len(roidb), 16, 1, 1)), dtype=np.float32)
             bbox_loss_weights_data = np.zeros(((64 * len(roidb), 16, 1, 1)), dtype=np.float32)
             
             # 5. class label
-            file_class_label = h5py.File(os.path.join(output_dir, 'class_label' + \
-                '_' + str(i_round).zfill(2) +'_'+ str(i_part).zfill(2) + '.h5'), 'w')
             image_label_data = np.zeros(((64 * len(roidb), 1, 1, 1)), dtype=np.float32)
             
             tic = timeit.default_timer()
@@ -205,22 +258,20 @@ if __name__ == '__main__':
                     
                     print('Time spent on processing 100 image is {}'.format(toc - tic))
                     tic = timeit.default_timer()
-                    
                         
                 db_inds = index[cur: cur + cfg.TRAIN.IMS_PER_BATCH]            
-                
                 cur_db = [roidb[i] for i in db_inds]
-                
                 blob = get_minibatch(cur_db, cfg.HDF5_NUM_CLASS + 1, cfg.HDF5_NUM_LABEL)
     
                 # 2. multi_label blob               
-                sleeve_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
+                if not args.merge:
+                    sleeve_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
                         (cur + 2) * cfg.TRAIN.BATCH_SIZE / 2, :, :, :] = \
                         blob['sleeve'].reshape(cfg.TRAIN.BATCH_SIZE, 1, 1, 1)
-                texture_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
+                    texture_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
                         (cur + 2) * cfg.TRAIN.BATCH_SIZE / 2, :, :, :] = \
                         blob['texture'].reshape(cfg.TRAIN.BATCH_SIZE, 1, 1, 1)
-                neckband_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
+                    neckband_data[cur * cfg.TRAIN.BATCH_SIZE / 2: \
                         (cur + 2) * cfg.TRAIN.BATCH_SIZE / 2, :, :, :] = \
                         blob['neckband'].reshape(cfg.TRAIN.BATCH_SIZE, 1, 1, 1)
                         
@@ -260,20 +311,17 @@ if __name__ == '__main__':
                 cur = cur + cfg.TRAIN.IMS_PER_BATCH
             
             
-            sleeve_dset = file_multilabel.create_dataset("sleeve", data=sleeve_data)
-            texture_dset = file_multilabel.create_dataset("texture", data=texture_data)
-            neckband_dset = file_multilabel.create_dataset("neckband", data=neckband_data)    
-            image_dset = file_image.create_dataset("data", data=image_data)            
-            image_label_dset = file_class_label.create_dataset("labels", data=image_label_data)
-            bbox_targets_dset = \
-                file_bbox.create_dataset("bbox_targets", data=bbox_targets_data)
-            bbox_loss_weights_dset = \
-                file_bbox.create_dataset("bbox_loss_weights", data=bbox_loss_weights_data)
-            rois_dset = file_rois.create_dataset("rois", data=rois_data)
-      
-            file_class_label.close()
-            file_bbox.close()
-            file_multilabel.close()
-            file_image.close()
-            file_rois.close()
-        
+            if not args.merge:
+                fast_rcnn_dataset.create_dataset("sleeve", data=sleeve_data)
+                fast_rcnn_dataset.create_dataset("texture", data=texture_data)
+                fast_rcnn_dataset.create_dataset("neckband", data=neckband_data)    
+            fast_rcnn_dataset.create_dataset("data", data=image_data)            
+            fast_rcnn_dataset.create_dataset("labels", data=image_label_data)
+            fast_rcnn_dataset.create_dataset("bbox_targets", data=bbox_targets_data)
+            fast_rcnn_dataset.create_dataset("bbox_loss_weights", data=bbox_loss_weights_data)
+            fast_rcnn_dataset.create_dataset("rois", data=rois_data)
+            fast_rcnn_dataset.create_dataset("bbox_means", data=bbox_means)
+            fast_rcnn_dataset.create_dataset("bbox_stds", data=bbox_stds)
+
+            fast_rcnn_dataset.close()
+    file.close()

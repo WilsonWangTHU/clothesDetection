@@ -166,12 +166,12 @@ class new_database(datasets.imdb):
             image_path = os.path.join(self._data_path, self._stage,
                 str(self._image_twentysix_type[i]), str(self._image_index[i]))
         else:
-            if self.dataset_name in ['CFD', 'CCP']:
+            if self.dataset_name in ['CFD', 'CCP', 'Fashionista']:
                 image_path = os.path.join(self._devkit_path, self.dataset_name,
                     'images', self._image_index[i])
             else:
-                assert self.dataset_name == 'Not implemented', \
-                        "Error! Fashionist not implemented!"
+                assert 1 == 2, \
+                        "Error! Unknow dataset!"
 
         assert os.path.exists(image_path), \
             'image file does not exist: {}{}'.format(image_path, i)
@@ -232,14 +232,14 @@ class new_database(datasets.imdb):
                             image_index.append(y[y.find('\\') + 1: y.find('.jpg')] + '.jpg')
                             
         else:
-            if self.dataset_name in ['CCP', 'CFD']:
+            if self.dataset_name in ['CCP', 'CFD', 'Fashionista']:
                 image_index.extend(os.listdir(os.path.join(
                     self._devkit_path, self.dataset_name, 'images')))
                 image_label = image_index
                 image_twentysix_type = image_index
                 image_type = image_index
             else:
-                assert 1 == 2, 'Fashionist not implemented'
+                assert 1 == 2, "Unknown dataset {}!".format(self.dataset_name)
 
         return image_index, image_type, image_label, image_twentysix_type
 
@@ -309,8 +309,8 @@ class new_database(datasets.imdb):
             gt_roidb = [self._load_JD_dataset_annotation(i)
                     for i in xrange(len(self.image_index))]
         else:
-            assert self.dataset_name in ['CCP', 'CFD'], \
-                    'Fashionist not implemented'
+            assert self.dataset_name in ['CCP', 'CFD', 'Fashionista'], \
+                    '{} is an UNKNOWN dataset!'.format(self.dataset_name)
             gt_roidb = [self._load_CFDCCP_dataset_annotation(i)
                     for i in xrange(len(self.image_index))]
         print 'Finish loading annotations'
@@ -330,13 +330,14 @@ class new_database(datasets.imdb):
                     str(self._image_twentysix_type[i]),
                     'proposals', self._image_index[i][7:])
             else:
-                assert self.dataset_name in ['CCP', 'CFD'], 'Fashionist not implemented!'
+                assert self.dataset_name in ['CCP', 'CFD', 'Fashionista'], \
+                    'Unknow dataset {}'.format(self.dataset_name)
                 filename = os.path.join(self._devkit_path, self.dataset_name, 
                     'proposals', self._image_index[i])
             assert os.path.exists(filename), \
                 'Proposal box data not found at: {}'.format(filename)
             
-            if self.dataset_name in ['CCP', 'CFD']:
+            if self.dataset_name in ['CCP', 'CFD', 'Fashionista']:
                 data = open(filename, "r")
                 number_proposals = int(data.readline())
                 number_edge = int(data.readline())
@@ -345,7 +346,7 @@ class new_database(datasets.imdb):
                 for i in xrange(number_proposals):
                     raw_data[i, :] = np.float32(data.readline().strip().split())
             else:
-                assert 1 == 2, 'Unknown dataset'
+                assert 1 == 2, 'Unknown dataset {}'.format(self.dataset_name)
                 data = open(filename, "rb").read()
                 number_proposals = struct.unpack("i", data[0:4])[0]
                 number_edge = struct.unpack("i", data[4:8])[0]

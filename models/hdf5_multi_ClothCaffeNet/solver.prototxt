@@ -10,7 +10,7 @@ momentum: 0.9
 weight_decay: 0.0005
 # We disable standard caffe solver snapshotting and implement our own snapshot
 # function
-snapshot: 40000
+snapshot: 1000
 # We still use the snapshot prefix, though
-snapshot_prefix: "caffenet_fast_rcnn"
+snapshot_prefix: "/media/DataDisk/twwang/fast-rcnn/data/output/caffenet_fast_rcnn_hdf5/"
 #debug_info: true
