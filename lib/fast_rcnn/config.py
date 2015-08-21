@@ -86,6 +86,7 @@ __C.TEST = edict()
 
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
+# __C.TEST.SCALES = (350,)
 __C.TEST.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
@@ -139,6 +140,7 @@ __C.HDF5_NUM_LABEL = 22
 __C.HDF5_BYPASS_SYS_IM_ROIS = True
 __C.HDF5_IMAGE_HEIGHT = 350
 __C.HDF5_IMAGE_WIDTH = 350
+__C.HDF5_TEST = True
 
 
 # The mapping from image coordinates to feature map coordinates might cause

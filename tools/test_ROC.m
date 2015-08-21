@@ -10,11 +10,14 @@
 
 clc, clear;
 % set in the JD datasets set the dataset you want to test
-JD_datasets = true;
-forever21_datasets = false;
+JD_datasets = false;
+forever21_datasets = true;
 
 % set the testing method
 method = 'fast-RCNN'; % 'pose'
+
+% in version 2, we test the model funtuned by the cfd and fashionista data
+model_version = 2;
 
 % setting for whether to plot or not
 plot_for_each_category = true;
@@ -23,10 +26,10 @@ plot_for_each_category = true;
 test_type_1000 = false;
 
 % set this on when considering the multi_label attributive test
-multilabel_test = true;
+multilabel_test = false;
 
 % set this on when testing the softmax attributive retrieval
-multilabel_softmax = true;
+multilabel_softmax = false;
 sfm_min_cdf = 0;
 sfm_max_cdf = 9.9;
 % some basic test parameters
@@ -71,6 +74,10 @@ else
     end
 end
 
+if model_version == 2
+    result_save_path = [result_save_path '_version2'];
+end
+
 fprintf('The results will be saved to %s\n', result_save_path);
 
 number_gt = zeros(step_number, 1);
@@ -96,8 +103,8 @@ if forever21_datasets == true
         fprintf('Running the test when the cfd is %f\n', cfd_threshhold)
         [number_gt(count), number_pst_detection(count), ...
             number_detection(count), number_recall(count)] = ...
-            ROC_forever21_datasets(method, upper, lower_type1, ...
-            lower_type2, whole, cfd_threshhold, IOU_threshhold);
+            ROC_forever21_datasets(method, cfd_threshhold, ...
+            IOU_threshhold, model_version);
         count = count + 1;
     end
     

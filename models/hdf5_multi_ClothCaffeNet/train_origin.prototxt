@@ -1,17 +1,32 @@
 name: "CaffeNet"
 layer {
-  name: 'data'
-  type: 'Python'
-  top: 'data'
-  top: 'rois'
-  top: 'labels'
-  top: 'bbox_targets'
-  top: 'bbox_loss_weights'
-  top: 'multi_label'
-  python_param {
-    module: 'roi_data_layer.layer'
-    layer: 'RoIDataLayer'
-    param_str: "{'num_classes': 4,'num_labels': 23}"
+  name: "image_data"
+  type: "HDF5GeneralData"
+  top: "data"
+  include {
+    phase: TRAIN
+  }
+  hdf5_general_data_param {
+    source: "models/hdf5_multi_ClothCaffeNet/data/merge_dataset.txt"
+    batch_size: 2
+    field: "data"
+    datatype: "int8"
+  }
+}
+# the label class input should be 128 * 1 * 1 * 1, origin: N * 1 * 1 * 1
+layer {
+  name: "128batchdata"
+  type: "HDF5Data"
+  top: "labels"
+  top: "bbox_targets"
+  top: "bbox_loss_weights"
+  top: "rois"
+  include {
+    phase: TRAIN
+  }
+  hdf5_data_param {
+    source: "models/hdf5_multi_ClothCaffeNet/data/merge_dataset.txt"
+    batch_size: 128
   }
 }
 layer {
@@ -291,31 +306,6 @@ layer {
   }
 }
 layer {
-  name: "multi_label_score"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "multi_label_score"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 23
-    weight_filler {
-      type: "gaussian"
-      std: 0.01
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
   name: "bbox_pred"
   type: "InnerProduct"
   bottom: "fc7"
@@ -339,14 +329,6 @@ layer {
       value: 0
     }
   }
-}
-layer {
-  name: "loss_multi_label"
-  type: "MultiLabelLoss"
-  bottom: "multi_label_score"
-  bottom: "multi_label"
-  top: "loss_multi_label"
-  loss_weight: 1
 }
 layer {
   name: "loss_cls"

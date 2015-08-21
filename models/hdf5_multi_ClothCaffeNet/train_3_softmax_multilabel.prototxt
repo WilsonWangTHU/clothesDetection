@@ -1,4 +1,5 @@
 name: "CaffeNet"
+#./caffe-fast-rcnn/build/tools/caffe train --solver=models/hdf5_multi_ClothCaffeNet/solver.prototxt --weights=data/fast_rcnn_models/caffenet_fast_rcnn_iter_40000.caffemodelr.prototxt --weights=data/fast_rcnn_models/caffenet_fast_rcnn_iter_4
 # the image input should be 2 * 3 * 600 * 600, origin: X * 600 * 600 * 3
 layer {
   name: "image_data"
@@ -8,64 +9,28 @@ layer {
     phase: TRAIN
   }
   hdf5_general_data_param {
-    source: "models/hdf5_multi_ClothCaffeNet/data/image_train.txt"
+    source: "models/hdf5_multi_ClothCaffeNet/data/JD_training_set.txt"
     batch_size: 2
     field: "data"
     datatype: "int8"
   }
 }
-# the rois input should be 128 * 5 * 1 * 1, origin: N * 5 * 1 * 1
+# the label class input should be 128 * 1 * 1 * 1, origin: N * 1 * 1 * 1
 layer {
-  name: "rois_data"
+  name: "128batchdata"
   type: "HDF5Data"
+  top: "labels"
+  top: "bbox_targets"
+  top: "bbox_loss_weights"  
+  top: 'texture'
+  top: 'neckband'
+  top: 'sleeve'
   top: "rois"
   include {
     phase: TRAIN
   }
   hdf5_data_param {
-    source: "models/hdf5_multi_ClothCaffeNet/data/rois_train.txt"
-    batch_size: 128
-  }
-}
-# the label class input should be 128 * 1 * 1 * 1, origin: N * 1 * 1 * 1
-layer {
-  name: "labels_data"
-  type: "HDF5Data"
-  top: "labels"
-  include {
-    phase: TRAIN
-  }
-  hdf5_data_param {
-    source: "models/hdf5_multi_ClothCaffeNet/data/labels_train.txt"
-    batch_size: 128
-  }
-}
-# the bbox input should be 128 * 1 * 1 * 1, -origin: N * 1 * 1 * 1
-layer {
-  name: "bbox_data"
-  type: "HDF5Data"
-  top: "bbox_targets"
-  top: "bbox_loss_weights"
-  include {
-    phase: TRAIN
-  }
-  hdf5_data_param {
-    source: "models/hdf5_multi_ClothCaffeNet/data/bbox_train.txt"
-    batch_size: 128
-  }
-}
-# the multi_label input should be 128 * 1 * 1 * 1, origin: N * 1 * 1 * 1
-layer {
-  name: "multi_label_data"
-  type: "HDF5Data"
-  top: 'texture'
-  top: 'neckband'
-  top: 'sleeve'
-  include {
-    phase: TRAIN
-  }
-  hdf5_data_param {
-    source: "models/hdf5_multi_ClothCaffeNet/data/multilabel_train.txt"
+    source: "models/hdf5_multi_ClothCaffeNet/data/JD_training_set.txt"
     batch_size: 128
   }
 }

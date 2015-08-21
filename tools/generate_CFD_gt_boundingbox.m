@@ -6,10 +6,10 @@
 % ------------------------------------------------------------------------
 
 addpath '../lib/matlab_lib/'
-debug = false;
+debug = true;
 
 CFD_root_dir = '../data/CFD/';
-CFD_image_dir = '../data/CFD/image/';
+CFD_image_dir = '../data/CFD/images/';
 CFD_boundingbox_output_dir = [CFD_root_dir 'bounding_box/'];
 
 % the index for delivering the type into the training three types

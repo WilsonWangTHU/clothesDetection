@@ -70,8 +70,9 @@ void HDF5GeneralDataLayer<Dtype>::LoadGeneralHDF5FileData(const char* filename) 
         blob_dims[j] = dims[j];
       }
       hdf_blobs_[i]->Reshape(blob_dims);
-
+      std::cout<<"Trying to allocate memories!\n";
 		  int* buffer_data = new int[hdf_blobs_[i]->count()];
+      std::cout<<"Memories loaded!!!\n";
 		  status = H5LTread_dataset_int(file_id, dataset_name_, buffer_data);
 		  CHECK_GE(status, 0) << "Failed to read int8 dataset " << dataset_name_;
 

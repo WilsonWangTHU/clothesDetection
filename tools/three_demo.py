@@ -20,10 +20,10 @@ from utils.cython_nms import nms
 from utils.timer import Timer
 #import matplotlib.pyplot as plt
 import numpy as np
-import scipy.io as sio
-import caffe, os, sys, cv2
+import caffe, os, cv2
 import argparse
 import struct
+import cPickle
 
 CONF_THRESH = 0.5
 NMS_THRESH = 0.3
@@ -53,7 +53,7 @@ def vis_detections(im, class_name, dets, image_name, thresh=0.5):
         #print im.shape
         cv2.imwrite("/home/twwang/demo_results/" + \
             os.path.split(image_name)[1], im)
-
+    
 def demo(net, image_name):
 
     # get the proposals by using the shell to use c++ codes    
@@ -104,6 +104,8 @@ def demo(net, image_name):
         dets = dets[keep, :]
         
         vis_detections(im, cls, dets, image_name, thresh=CONF_THRESH)
+    print ('The demo image is save as {}').format("/home/twwang/demo_results/" + \
+        os.path.split(image_name)[1])
 
 def parse_args():
     """Parse input arguments."""
@@ -116,6 +118,9 @@ def parse_args():
                         action='store_true')    
     parser.add_argument('--image', dest='img',
                         help='The input image',)
+    parser.add_argument('--version', dest='version',
+			default=2, type=int,
+			help='The version of the model used',)
 
     args = parser.parse_args()
 
@@ -124,10 +129,14 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if not cfg.MULTI_LABEL:    
-        caffemodel = os.path.join(cfg.ROOT_DIR +
-            '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
-            'caffenet_fast_rcnn_iter_40000.caffemodel')
+    if not cfg.MULTI_LABEL:
+        if args.version == 1:
+            caffemodel = os.path.join(cfg.ROOT_DIR +
+                '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
+                'caffenet_fast_rcnn_iter_40000.caffemodel')
+        else:
+            caffemodel = os.path.join('/media/DataDisk/twwang/fast-rcnn',
+                'data/output/caffenet_fast_rcnn_hdf5/base_lr=0.001_3_class_clothes_iter_40000.caffemodel')
         prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
                                 'test.prototxt')
     else:
@@ -147,6 +156,23 @@ if __name__ == '__main__':
         caffe.set_device(args.gpu_id)
         
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
+    if args.version == 2:        
+        ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+        save_bbox_file = os.path.join(ROOT_DIR, 'data', 'CFD_Fashionista' + 'bbox_means.pkl')
+        with open(save_bbox_file, 'rb') as fid:
+            bbox_means = cPickle.load(fid)    
+    
+        save_bbox_file = os.path.join(ROOT_DIR, 'data', 'CFD_Fashionista' + 'bbox_stds.pkl')
+        with open(save_bbox_file, 'rb') as fid:
+            bbox_stds = cPickle.load(fid)    
+        
+        net.params['bbox_pred'][0].data[...] = \
+                    (net.params['bbox_pred'][0].data *
+                     bbox_stds[:, np.newaxis])
+        net.params['bbox_pred'][1].data[...] = \
+                    (net.params['bbox_pred'][1].data *
+                     bbox_stds + bbox_means)
 
     print '\n\nLoaded network {:s}'.format(caffemodel)
 

@@ -53,6 +53,8 @@ def vis_detections(im, class_name, dets, image_name, thresh=0.5):
         #print im.shape
         cv2.imwrite("/home/twwang/demo_results/" + \
             os.path.split(image_name)[1], im)
+    print ('The demo image is save as {}').format("/home/twwang/demo_results/" + \
+        os.path.split(image_name)[1])
 
 def demo(net, image_name):
 
@@ -116,6 +118,9 @@ def parse_args():
                         action='store_true')    
     parser.add_argument('--image', dest='img',
                         help='The input image',)
+    parser.add_argument('--version', dest='version',
+			default=2, type=int,
+			help='The version of the model used',)
 
     args = parser.parse_args()
 
@@ -124,10 +129,14 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if not cfg.MULTI_LABEL:    
-        caffemodel = os.path.join(cfg.ROOT_DIR +
-            '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
-            'caffenet_fast_rcnn_iter_40000.caffemodel')
+    if not cfg.MULTI_LABEL:
+        if args.version == 1:
+            caffemodel = os.path.join(cfg.ROOT_DIR +
+                '/output/default/clothesDataset_3CL=True_BLC=True_COF=True_TT1000=True',
+                'caffenet_fast_rcnn_iter_40000.caffemodel')
+        else:
+            caffemodel = os.path.join('/media/DataDisk/twwang/fast-rcnn',
+                'data/output/caffenet_fast_rcnn_hdf5/base_lr=0.001_3_class_clothes_iter_40000.caffemodel')
         prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
                                 'test.prototxt')
     else:

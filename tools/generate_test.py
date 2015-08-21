@@ -13,6 +13,8 @@ from fast_rcnn.test import im_detect
 from utils.cython_nms import nms
 from utils.timer import Timer
 import numpy as np
+import cPickle
+
 import caffe, os, sys, cv2
 import argparse
 import struct
@@ -56,10 +58,10 @@ num_category = 26
 num_class = 3
 
 Jingdong_root_dir = '/media/DataDisk/twwang/fast-rcnn/data/clothesDataset/test'
-Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong_bg'
+Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong_version2'
 
 forever21_data_dir = '/media/DataDisk/twwang/fast-rcnn/data/CCP'
-forever21_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/forever21'
+forever21_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/CCP'
 
 top_number = 10
 
@@ -165,19 +167,20 @@ def readcloth_proposals(image_name, category):
 def fowever21test(net, args):
 
     # reading the file names in the mapping files
-    image_dir = os.path.join(forever21_data_dir, 'photos')
+    image_dir = os.path.join(forever21_data_dir, 'images')
     #proposal_dir = os.path.join(forever21_data_dir, 'proposals')
 
     # get the image name
-    image_name = [f for f in os.listdir(image_dir) if os.path.isfile(os.path.join(image_dir, f))]
+    image_name = [f for f in os.listdir(image_dir) \
+        if os.path.isfile(os.path.join(image_dir, f))]
 
     # get the proposals
     # Load image one by one
     for i_image in xrange(0, len(image_name)):
         image_file = os.path.join(forever21_data_dir, \
-                'photos', image_name[i_image])
+                'images', image_name[i_image])
         proposal_file = os.path.join(forever21_data_dir, \
-                'proposals', 'proposals' + image_name[i_image])
+                'proposals', image_name[i_image])
         
         data = open(proposal_file, "r")
         number_proposals = int(data.readline())
@@ -663,7 +666,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-
+    ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     if args.Caffenet == 0 or args.prototxt == 0:
         print("Specify the network path!")
         sys.exit()
@@ -682,8 +685,30 @@ if __name__ == '__main__':
         caffe.set_mode_gpu()
         caffe.set_device(args.gpu_id)
     
-    net = caffe.Net(prototxt, caffemodel, caffe.TEST)
+    if args.dataset == 'Jingdong':
+        imdb_name = 'clothesDataset'
+    else:
+        if args.dataset == 'merge':
+            imdb_name = 'CFD_Fashionista'
+        else:
+            assert 1 == 2, 'Not implemented'
+        
+    save_bbox_file = os.path.join(ROOT_DIR, 'data', imdb_name + 'bbox_means.pkl')
+    with open(save_bbox_file, 'rb') as fid:
+        bbox_means = cPickle.load(fid)    
 
+    save_bbox_file = os.path.join(ROOT_DIR, 'data', imdb_name + 'bbox_stds.pkl')
+    with open(save_bbox_file, 'rb') as fid:
+        bbox_stds = cPickle.load(fid)    
+            
+    net = caffe.Net(prototxt, caffemodel, caffe.TEST)
+    if cfg.HDF5_TEST:
+        net.params['bbox_pred'][0].data[...] = \
+                    (net.params['bbox_pred'][0].data *
+                     bbox_stds[:, np.newaxis])
+        net.params['bbox_pred'][1].data[...] = \
+                    (net.params['bbox_pred'][1].data *
+                     bbox_stds + bbox_means)
     print('\n\nLoaded network {:s}'.format(caffemodel))
  
     # change the output dir if necessary, and change the global 
@@ -692,13 +717,14 @@ if __name__ == '__main__':
         Jingdong_output_dir = Jingdong_output_dir + '_multi_label'
     if cfg.MULTI_LABEL_SOFTMAX:
         Jingdong_output_dir = Jingdong_output_dir + '_softmax'
-
+    if imdb_name == 'CFD_Fashionista':
+        forever21_output_dir = forever21_output_dir + '_version2'
     # test for each category
     if args.dataset == 'Jingdong':
         for iNum in xrange(1, num_category+1):
             category_test(iNum, net, args)
-    if args.dataset == 'forever21':
+    if args.dataset == 'forever21' or args.dataset == 'merge':
         fowever21test(net, args)
-    if args.dataset != 'forever21' and args.dataset != 'forever21':
+    if args.dataset != 'forever21' and args.dataset != 'Jingdong':
         general_test(net, args.dataset)
         

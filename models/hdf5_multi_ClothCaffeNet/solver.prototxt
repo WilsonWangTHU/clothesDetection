@@ -1,10 +1,10 @@
-train_net: "/media/DataDisk/twwang/fast-rcnn/models/hdf5_multi_ClothCaffeNet/train_3_softmax_multilabel.prototxt"
+train_net: "/media/DataDisk/twwang/fast-rcnn/models/hdf5_multi_ClothCaffeNet/train_origin.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.1
 stepsize: 30000
 display: 100
-max_iter: 10000000
+max_iter: 40000
 average_loss: 100
 momentum: 0.9
 weight_decay: 0.0005
@@ -12,5 +12,5 @@ weight_decay: 0.0005
 # function
 snapshot: 1000
 # We still use the snapshot prefix, though
-snapshot_prefix: "/media/DataDisk/twwang/fast-rcnn/data/output/caffenet_fast_rcnn_hdf5/"
+snapshot_prefix: "/media/DataDisk/twwang/fast-rcnn/data/output/caffenet_fast_rcnn_hdf5/base_lr=0.001_3_class_clothes"
 #debug_info: true

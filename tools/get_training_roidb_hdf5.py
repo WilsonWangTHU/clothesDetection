@@ -54,6 +54,42 @@ def parse_args():
     args = parser.parse_args()
     return args
     
+def prepocess_the_roidb(roidb):
+    for i_roidb in xrange(len(roidb)):
+        # process the roidb one by one
+        im = cv2.imread(os.path.abspath(os.path.join(__file__,
+            '..', roidb[i_roidb]['image'])))  
+        height = im.shape[0]
+        width = im.shape[1]
+
+        assert cfg.HDF5_IMAGE_HEIGHT == cfg.HDF5_IMAGE_WIDTH, \
+                "The function of differert width and height is not supported yet!"
+
+        if width > height:
+            # we resize the image width to the cfg
+            output_width = cfg.HDF5_IMAGE_WIDTH
+            output_height =  int(float(height) / width * cfg.HDF5_IMAGE_HEIGHT)
+            shift_x = 0
+            shift_y = int(float(cfg.HDF5_IMAGE_HEIGHT - output_height) / 2)
+        else:
+            output_height = cfg.HDF5_IMAGE_HEIGHT
+            output_width = int(float(width) / height * cfg.HDF5_IMAGE_WIDTH)
+            shift_y = 0
+            shift_x = int(float(cfg.HDF5_IMAGE_WIDTH - output_width) / 2)
+    
+        scale_width = float(output_width) / float(width)
+        scale_height = float(output_height) / float(height)
+            
+        roidb[i_roidb]['boxes'][:, 0] = \
+            roidb[i_roidb]['boxes'][:, 0] * scale_width + shift_x
+        roidb[i_roidb]['boxes'][:, 2] = \
+            roidb[i_roidb]['boxes'][:, 2] * scale_width + shift_x
+        roidb[i_roidb]['boxes'][:, 1] = \
+            roidb[i_roidb]['boxes'][:, 1] * scale_height + shift_y
+        roidb[i_roidb]['boxes'][:, 3] = \
+            roidb[i_roidb]['boxes'][:, 3] * scale_height + shift_y
+    return
+    
 def get_im_blob_in_one_function(image_path, roi_boxes, image_flipped_flag):
     # the first phase, we reshape the image and calculate the shift value
     im = cv2.imread(image_path)
@@ -79,19 +115,13 @@ def get_im_blob_in_one_function(image_path, roi_boxes, image_flipped_flag):
         output_width = int(float(width) / height * cfg.HDF5_IMAGE_WIDTH)
         shift_y = 0
         shift_x = int(float(cfg.HDF5_IMAGE_WIDTH - output_width) / 2)
-    scale_width = float(output_width) / float(width)
-    scale_height = float(output_height) / float(height)
+    #scale_width = float(output_width) / float(width)
+    #scale_height = float(output_height) / float(height)
     im = cv2.resize(im, dsize=(output_height, output_width), 
         interpolation=cv2.INTER_LINEAR)  # resize the image 
     stuffed_image = np.zeros((cfg.HDF5_IMAGE_WIDTH, cfg.HDF5_IMAGE_HEIGHT, 3),
         dtype=np.float32)
     # copy the image data into the stuffed_image
-    if stuffed_image[shift_x : shift_x + im.shape[0],
-                  shift_y : shift_y + im.shape[1], :].shape[0] != im[0 : 0 + im.shape[0], 
-                     0 : 0 + im.shape[1], :].shape[0] or stuffed_image[shift_x : shift_x + im.shape[0],
-                  shift_y : shift_y + im.shape[1], :].shape[1] != im[0 : 0 + im.shape[0], 
-                     0 : 0 + im.shape[1], :].shape[1]:
-        print 'test'
     stuffed_image[shift_x : shift_x + im.shape[0],
                   shift_y : shift_y + im.shape[1], :] = \
                   im[0 : 0 + im.shape[0], 
@@ -102,10 +132,10 @@ def get_im_blob_in_one_function(image_path, roi_boxes, image_flipped_flag):
     stuffed_image = stuffed_image.transpose(channel_swap)
 
     # now for the rois! 1,3 -> witdh; 2,4->height
-    roi_boxes[:, 1] = roi_boxes[:, 1] * scale_width + shift_x
-    roi_boxes[:, 3] = roi_boxes[:, 3] * scale_width + shift_x
-    roi_boxes[:, 2] = roi_boxes[:, 2] * scale_height + shift_y
-    roi_boxes[:, 4] = roi_boxes[:, 4] * scale_height + shift_y
+    #roi_boxes[:, 1] = roi_boxes[:, 1] * scale_width + shift_x
+    #roi_boxes[:, 3] = roi_boxes[:, 3] * scale_width + shift_x
+    #roi_boxes[:, 2] = roi_boxes[:, 2] * scale_height + shift_y
+    #roi_boxes[:, 4] = roi_boxes[:, 4] * scale_height + shift_y
     
     return stuffed_image.astype(np.uint8), roi_boxes
 
@@ -131,7 +161,7 @@ if __name__ == '__main__':
     cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
     
     if args.merge:
-        assert args.imdb_name == 'CCP_CFD_Fashionista', \
+        assert args.imdb_name == 'CFD_Fashionista', \
                 'We could only merge three dataset together!'
         
         loaded_flag = False
@@ -141,7 +171,7 @@ if __name__ == '__main__':
 
         this_dataset_roidb = dict()
         if not loaded_flag:
-            for i_database_name in ['CCP', 'CFD', 'Fashionista']:
+            for i_database_name in ['CFD', 'Fashionista']:
                 cache_file = os.path.join(cache_path, \
                     i_database_name + '_train' + '_3CL=' + str(cfg.ThreeClass) + \
                     '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
@@ -166,11 +196,9 @@ if __name__ == '__main__':
                     format(i_database_name))
             
             origin_roidb = []
-            for i_database_name in ['CCP', 'CFD', 'Fashionista']:
+            for i_database_name in ['CFD', 'Fashionista']:
                 origin_roidb.extend(this_dataset_roidb[i_database_name])
 
-        bbox_means, bbox_stds = \
-            rdl_roidb.add_bbox_regression_targets(origin_roidb)    
         print('Generating the hdf5 training data')
     else:
         cache_file = os.path.join(cache_path, \
@@ -195,10 +223,22 @@ if __name__ == '__main__':
                 with open(cache_file, 'wb') as fid:
                     cPickle.dump(origin_roidb, fid, cPickle.HIGHEST_PROTOCOL)
                 print('The precomputed roidb saved to {}'.format(cache_file))
-        bbox_means, bbox_stds = \
-            rdl_roidb.add_bbox_regression_targets(origin_roidb)    
         print('Generating the hdf5 training data')
+
+    prepocess_the_roidb(origin_roidb)
     
+    bbox_means, bbox_stds = \
+        rdl_roidb.add_bbox_regression_targets(origin_roidb)    
+        
+    print('Saving the bbox information')
+    save_bbox_file = os.path.join(ROOT_DIR, 'data', args.imdb_name + 'bbox_means.pkl')
+    if not os.path.exists(save_bbox_file):
+        with open(save_bbox_file, 'wb') as fid:
+            cPickle.dump(bbox_means, fid, cPickle.HIGHEST_PROTOCOL)
+    save_bbox_file = os.path.join(ROOT_DIR, 'data', args.imdb_name + 'bbox_stds.pkl')
+    if not os.path.exists(save_bbox_file):
+        with open(save_bbox_file, 'wb') as fid:
+            cPickle.dump(bbox_stds, fid, cPickle.HIGHEST_PROTOCOL)
     # get the index of the fetching divide the dataset into 17 part
     if not args.merge:
         file = open(os.path.join(ROOT_DIR, 'models', 'hdf5_multi_ClothCaffeNet', 
@@ -207,7 +247,7 @@ if __name__ == '__main__':
     else:
         file = open(os.path.join(ROOT_DIR, 'models', 'hdf5_multi_ClothCaffeNet', 
             'data', 'merge_dataset.txt'), 'w')
-        part_num = 1
+        part_num = 3
 
     for i_round in xrange(args.number_of_round):
         for i_part in xrange(part_num):

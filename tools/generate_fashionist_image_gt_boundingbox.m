@@ -8,8 +8,8 @@
 % Written by Tingwu Wang, 11.08.2015, as a junior RA in CUHK, MMLAB
 % ------------------------------------------------------------------------
 
-addpath '../lib/matlab_lib/'
-debug = false;
+addpath(genpath('../lib/matlab_lib/'));
+debug = true;
 
 fashionista_root_dir = '../data/Fashionista/';
 fashionista_image_output_dir = '../data/Fashionista/images/';

@@ -13,7 +13,7 @@ number_recall = 0;
 if strcmp(dataset_name, 'forever21')
     % validate the size of input, two datasets are different
     co_size = size(gt_coordinates);
-    if co_size(1) ~= 3
+    if co_size(1) ~= 4
         error('The size is unmatched, Upper, Lower1, Lower2 means 3!')
     end
     
