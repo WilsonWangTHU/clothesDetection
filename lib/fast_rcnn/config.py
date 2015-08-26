@@ -55,7 +55,7 @@ __C.TRAIN.FG_THRESH = 0.5
 # Overlap threshold for a ROI to be considered background (class = 0 if
 # overlap in [LO, HI))
 __C.TRAIN.BG_THRESH_HI = 0.5
-__C.TRAIN.BG_THRESH_LO = 0
+__C.TRAIN.BG_THRESH_LO = 0.1
 
 # Use horizontally-flipped images during training?
 __C.TRAIN.USE_FLIPPED = True
@@ -68,7 +68,7 @@ __C.TRAIN.BBOX_REG = True
 __C.TRAIN.BBOX_THRESH = 0.5
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 100
+__C.TRAIN.SNAPSHOT_ITERS = 1000
 
 # solver.prototxt specifies the snapshot path prefix, this adds an optional
 # infix to yield the path: <prefix>[_<infix>]_iters_XYZ.caffemodel
@@ -109,7 +109,7 @@ __C.TEST.BBOX_REG = True
 
 # now for the overall settings ---- by Tingwu Wang
 __C.MULTI_LABEL = True
-__C.MULTI_LABEL_SOFTMAX = False
+__C.MULTI_LABEL_SOFTMAX = True
 __C.NUM_MULTI_LABEL_TEXTURE = 9
 __C.NUM_MULTI_LABEL_SLEEVE = 3
 __C.NUM_MULTI_LABEL_NECKBAND = 10
@@ -123,7 +123,7 @@ __C.ATTR_THRESH = 0.3
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
 __C.SEP_DETECTOR = True
-__C.SEP_DETECTOR_NUM = 1
+__C.SEP_DETECTOR_NUM = 2
 
 # set BALANCED True if we want more duplicate data in the 
 # third calss

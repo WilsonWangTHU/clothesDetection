@@ -391,8 +391,10 @@ bool Blob<Dtype>::ShapeEquals(const BlobProto& other) {
            LegacyShape(-1) == other.width();
   }
   vector<int> other_shape(other.shape().dim_size());
+  LOG(INFO)<<"The shape of this dim is : "<<other.shape().dim_size();
   for (int i = 0; i < other.shape().dim_size(); ++i) {
     other_shape[i] = other.shape().dim(i);
+    LOG(INFO)<<"   "<<other.shape().dim(i)<<"  "<<shape_[i];
   }
   return shape_ == other_shape;
 }
@@ -451,7 +453,7 @@ void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
     }
     Reshape(shape);
   } else {
-    CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";
+    CHECK(ShapeEquals(proto)) << "shape mismatch (reshape not set)";   
   }
   // copy data
   Dtype* data_vec = mutable_cpu_data();

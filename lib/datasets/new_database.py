@@ -216,7 +216,7 @@ class new_database(datasets.imdb):
                 class_list = [8, 11, 20]
             
             if cfg.SEP_DETECTOR:
-                class_list = TYPE_MAPPER[cfg.SEP_DETECTOR]
+                class_list = TYPE_MAPPER[cfg.SEP_DETECTOR_NUM]
                 
             for class_type in class_list:
                 # the twenty six type is useful when loading the annotations
