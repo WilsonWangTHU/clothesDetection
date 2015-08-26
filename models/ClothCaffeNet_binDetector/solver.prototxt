@@ -1,4 +1,4 @@
-train_net: "/media/DataDisk/twwang/fast-rcnn/models/ClothCaffeNet_binDetector/train_bin_softmax_multilabel.prototxt"
+train_net: "/media/DataDisk/twwang/fast-rcnn/models/ClothCaffeNet_binDetector/train_binary_multilabel.prototxt"
 base_lr: 0.001
 lr_policy: "step"
 gamma: 0.1
