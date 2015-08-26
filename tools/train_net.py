@@ -78,16 +78,28 @@ if __name__ == '__main__':
     if args.gpu_id is not None:
         caffe.set_device(args.gpu_id)
     
-    cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
-    cache_file = os.path.join(cache_path, \
-        args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
-        '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
-        '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
-        '_BLC=' + str(cfg.BALANCED) + \
-        '_COF=' + str(cfg.BALANCED_COF) + \
-        '_TT1000=' + str(cfg.TESTTYPE1000) + \
-        '_solver_roidb.pkl')
-    
+    if cfg.SEP_DETECTOR:
+        cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
+        cache_file = os.path.join(cache_path, \
+            args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
+            '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+            '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+            '_BLC=' + str(cfg.BALANCED) + \
+            '_COF=' + str(cfg.BALANCED_COF) + \
+            '_TT1000=' + str(cfg.TESTTYPE1000) + \
+            '_SEP_DETECTOR' + str(cfg.SEP_DETECTOR_NUM) + \
+            '_solver_roidb.pkl')
+    else:
+        cache_path = os.path.abspath(os.path.join(ROOT_DIR, 'data', 'cache'))
+        cache_file = os.path.join(cache_path, \
+            args.imdb_name + '_3CL=' + str(cfg.ThreeClass) + \
+            '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+            '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+            '_BLC=' + str(cfg.BALANCED) + \
+            '_COF=' + str(cfg.BALANCED_COF) + \
+            '_TT1000=' + str(cfg.TESTTYPE1000) + \
+            '_solver_roidb.pkl')
+        
     if os.path.exists(cache_file):
         with open(cache_file, 'rb') as fid:
             roidb = cPickle.load(fid)
@@ -105,7 +117,14 @@ if __name__ == '__main__':
         
     #//output_dir = output_dir + '_test'
     print 'Output will be saved to `{:s}`'.format(output_dir)
-
+    #if cfg.SEP_DETECTOR:
+        # in this case we need to change the class if not
+        #output_dir = output_dir + str(cfg.SEP_DETECTOR_NUM)
+        #for i_roidb in xrange(len(roidb)):
+            #if roidb[i_roidb]['gt_classes'][0] != cfg.SEP_DETECTOR_NUM:
+                
+                
+            # process the image one by one
     train_net(args.solver, roidb, output_dir,
               pretrained_model=args.pretrained_model,
               max_iters=args.max_iters)

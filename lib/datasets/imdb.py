@@ -60,7 +60,10 @@ class imdb(object):
 
     @property
     def num_classes(self):
-        return len(self._classes)
+        if cfg.SEP_DETECTOR:
+            return 2
+        else:
+            return len(self._classes)
 
     @property
     def classes(self):

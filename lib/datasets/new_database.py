@@ -15,6 +15,7 @@
 # Update: 01/08/2015, the multilabel attributive is added
 # Update: 08/08/2015, a better way to pick the foreground is introduced
 # Update: 14/08/2015, I try to add the CCP and CFD dataset into the dataset
+# Update: 25/08/2015,
 # -----------------------------------------------------------------------------
 
 from math import floor
@@ -36,8 +37,13 @@ import sys
 
 # this is a debuger to make sure the third class is working
 WHOLE_DEBUGER = {8 : 1, 11 : 2, 20: 3}
+TYPE_MAPPER = {1 : [1,2,3,4,5,6,7,9,10,12,13,14,15,16,17,18,19], 
+               2 : [21,22,23,24,25,26], 
+               3 : [8, 11, 20]}
 
 def twentysix2three(class_type):
+    if cfg.SEP_DETECTOR:
+        return 1
     if cfg.DEBUG_CLASS_WHOLE == True:
         return WHOLE_DEBUGER[class_type]
     if 1 <= class_type <= 7 or 9 <= class_type <= 10 or 12 <= class_type <= 19:
@@ -182,11 +188,12 @@ class new_database(datasets.imdb):
         Load the indexes listed in this dataset's image set file.  there 
         are more than 26 sub files in the system use the type_classes to
         read all the image!
-        """
         # Example path to JD image set file: 
         # fast-rcnn/data/clothesDataset/train/1/images/xxxx.jpg
         # fast-rcnn/data/CFD/images/xxxx.jpg
         # fast-rcnn/data/CCP/images/xxxx.jpg
+        """
+
         image_index = []
         image_type = []
         image_label = []
@@ -207,7 +214,10 @@ class new_database(datasets.imdb):
                 class_list.extend(append_list_20)
             if cfg.DEBUG_CLASS_WHOLE == True:
                 class_list = [8, 11, 20]
-    
+            
+            if cfg.SEP_DETECTOR:
+                class_list = TYPE_MAPPER[cfg.SEP_DETECTOR]
+                
             for class_type in class_list:
                 # the twenty six type is useful when loading the annotations
                 image_set_file = os.path.join(self._data_path, self._stage, str(class_type),
@@ -248,6 +258,7 @@ class new_database(datasets.imdb):
         Return the default path of closes.
         """
         return os.path.join(datasets.ROOT_DIR, 'data')
+        
     def roidb_loading_interface(self):
         """
         Return the database of selective search regions of interest.
@@ -255,7 +266,8 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, \
+        if not cfg.SEP_DETECTOR:
+            cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
                 '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
                 '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
@@ -263,7 +275,16 @@ class new_database(datasets.imdb):
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \
                 '_roidb.pkl')
-
+        else:
+            cache_file = os.path.join(self.cache_path, \
+                self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+                '_BLC=' + str(cfg.BALANCED) + \
+                '_COF=' + str(cfg.BALANCED_COF) + \
+                '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_SEP_DETECTOR' + str(cfg.SEP_DETECTOR_NUM) + \
+                '_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
@@ -291,13 +312,24 @@ class new_database(datasets.imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, \
+        if not cfg.SEP_DETECTOR:
+            cache_file = os.path.join(self.cache_path, \
                 self.name + '_3CL=' + str(cfg.ThreeClass) + \
                 '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
                 '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
                 '_BLC=' + str(cfg.BALANCED) + \
                 '_COF=' + str(cfg.BALANCED_COF) + \
                 '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_gt_roidb.pkl')
+        else:
+            cache_file = os.path.join(self.cache_path, \
+                self.name + '_3CL=' + str(cfg.ThreeClass) + \
+                '_MULTI_LABEL=' + str(cfg.MULTI_LABEL) + \
+                '_SOFTMAX=' + str(cfg.MULTI_LABEL_SOFTMAX) + \
+                '_BLC=' + str(cfg.BALANCED) + \
+                '_COF=' + str(cfg.BALANCED_COF) + \
+                '_TT1000=' + str(cfg.TESTTYPE1000) + \
+                '_SEP_DETECTOR' + str(cfg.SEP_DETECTOR_NUM) + \
                 '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
@@ -346,7 +378,8 @@ class new_database(datasets.imdb):
                 for i in xrange(number_proposals):
                     raw_data[i, :] = np.float32(data.readline().strip().split())
             else:
-                assert 1 == 2, 'Unknown dataset {}'.format(self.dataset_name)
+                assert self.dataset_name == 'clothesDataset', \
+                    'Unknown dataset {}'.format(self.dataset_name)
                 data = open(filename, "rb").read()
                 number_proposals = struct.unpack("i", data[0:4])[0]
                 number_edge = struct.unpack("i", data[4:8])[0]
@@ -590,14 +623,6 @@ class new_database(datasets.imdb):
                 'neckband_coordinate': neckband_coordinate,
                 'flipped': False,
                 'multi_label': multi_label}
-
-    def competition_mode(self, on):
-        if on:
-            self.config['use_salt'] = False
-            self.config['cleanup'] = False
-        else:
-            self.config['use_salt'] = True
-            self.config['cleanup'] = True
 
 if __name__ == '__main__':
     d = datasets.pascal_voc('trainval', '2007')

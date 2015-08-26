@@ -137,6 +137,8 @@ class RoIDataLayer(caffe.Layer):
         blobs = self._get_next_minibatch()
 
         for blob_name, blob in blobs.iteritems():
+            if blob_name == 'data':
+                continue
             top_ind = self._name_to_top_map[blob_name]
             # Reshape net's input blobs
             top[top_ind].reshape(*(blob.shape))

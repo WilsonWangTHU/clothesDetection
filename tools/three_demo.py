@@ -157,13 +157,16 @@ if __name__ == '__main__':
         
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
     if args.version == 2:        
-        ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        ROOT_DIR = os.path.abspath( \
+            os.path.join(os.path.dirname(__file__), '..'))
 
-        save_bbox_file = os.path.join(ROOT_DIR, 'data', 'CFD_Fashionista' + 'bbox_means.pkl')
+        save_bbox_file = os.path.join(ROOT_DIR, 'data', 
+            'CFD_Fashionista' + 'bbox_means.pkl')
         with open(save_bbox_file, 'rb') as fid:
             bbox_means = cPickle.load(fid)    
     
-        save_bbox_file = os.path.join(ROOT_DIR, 'data', 'CFD_Fashionista' + 'bbox_stds.pkl')
+        save_bbox_file = os.path.join(ROOT_DIR, 'data',
+            'CFD_Fashionista' + 'bbox_stds.pkl')
         with open(save_bbox_file, 'rb') as fid:
             bbox_stds = cPickle.load(fid)    
         
