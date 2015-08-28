@@ -306,7 +306,7 @@ layer {
   }
 }
 layer {
-  name: "cls_score2"
+  name: "cls_score"
   type: "InnerProduct"
   bottom: "fc7"
   top: "cls_score"

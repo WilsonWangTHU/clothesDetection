@@ -11,7 +11,6 @@ input_shape {
   dim: 1 # to be changed on-the-fly to num ROIs
   dim: 5 # [batch ind, x1, y1, x2, y2] zero-based indexing
 }
-
 layer {
   name: "conv1"
   type: "Convolution"
@@ -357,8 +356,6 @@ layer {
   }
 }
 
-
-
 # the loss of the bbx, cls, 3 multi_loss
 layer {
   name: "cls_score"
@@ -374,10 +371,36 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 4
+    num_output: 2
     weight_filler {
       type: "gaussian"
       std: 0.01
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layer {
+  name: "bbox_pred"
+  type: "InnerProduct"
+  bottom: "fc7"
+  top: "bbox_pred"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 8
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
     }
     bias_filler {
       type: "constant"
@@ -463,54 +486,4 @@ layer {
     }
   }
 }
-
-# the output results
-layer {
-  name: "cls_prob"
-  type: "Softmax"
-  bottom: "cls_score"
-  top: "cls_prob"
-}
-layer {
-  name: "bbox_pred"
-  type: "InnerProduct"
-  bottom: "fc7"
-  top: "bbox_pred"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 2
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 16
-    weight_filler {
-      type: "gaussian"
-      std: 0.001
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "sleeve_prob"
-  type: "Softmax"
-  bottom: "multi_sleeve"
-  top: "sleeve_prob"
-}
-layer {
-  name: "texture_prob"
-  type: "Softmax"
-  bottom: "multi_texture"
-  top: "texture_prob"
-}
-layer {
-  name: "neckband_prob"
-  type: "Softmax"
-  bottom: "multi_neckband"
-  top: "neckband_prob"
-}
+# the loss layer

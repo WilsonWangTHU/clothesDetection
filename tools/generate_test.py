@@ -52,13 +52,18 @@ sleeve_to_label_ind = dict(zip(
     sleeve_classes   
     ))
 
+TYPE_MAPPER = {1 : [1,2,3,4,5,6,7,9,10,12,13,14,15,16,17,18,19], 
+               2 : [21,22,23,24,25,26], 
+               3 : [8, 11, 20]}
+
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 num_category = 26
 num_class = 3
-
+if cfg.SEP_DETECTOR:
+    num_class = 1
 Jingdong_root_dir = '/media/DataDisk/twwang/fast-rcnn/data/clothesDataset/test'
-Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong_version2'
+Jingdong_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/Jingdong'
 
 forever21_data_dir = '/media/DataDisk/twwang/fast-rcnn/data/CCP'
 forever21_output_dir = '/media/DataDisk/twwang/fast-rcnn/data/results/CCP'
@@ -340,7 +345,6 @@ def category_test(category, net, args):
         image_file = os.path.join(Jingdong_root_dir, \
                 str(category), 'images', image_name[i_image])
         im = cv2.imread(image_file)
-
         # Detect all object classes and regress object bounds
         timer = Timer()
         timer.tic()
@@ -721,8 +725,18 @@ if __name__ == '__main__':
         forever21_output_dir = forever21_output_dir + '_version2'
     # test for each category
     if args.dataset == 'Jingdong':
-        for iNum in xrange(1, num_category+1):
-            category_test(iNum, net, args)
+        if cfg.SEP_DETECTOR:
+            Jingdong_output_dir = Jingdong_output_dir + '_Bin_Detector' + \
+                str(cfg.SEP_DETECTOR_NUM)
+            for iNum in TYPE_MAPPER[cfg.SEP_DETECTOR_NUM]:
+                if not os.path.isdir(os.path.join(Jingdong_output_dir,
+                    'images', str(iNum))):
+                    os.mkdir(os.path.join(Jingdong_output_dir,
+                        'images', str(iNum)))
+                category_test(iNum, net, args)
+        else:
+            for iNum in xrange(1, num_category+1):
+                category_test(iNum, net, args)
     if args.dataset == 'forever21' or args.dataset == 'merge':
         fowever21test(net, args)
     if args.dataset != 'forever21' and args.dataset != 'Jingdong':

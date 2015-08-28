@@ -119,7 +119,7 @@ def parse_args():
     parser.add_argument('--image', dest='img',
                         help='The input image',)
     parser.add_argument('--version', dest='version',
-			default=2, type=int,
+			default=1, type=int,
 			help='The version of the model used',)
 
     args = parser.parse_args()

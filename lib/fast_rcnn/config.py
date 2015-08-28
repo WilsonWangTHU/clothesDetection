@@ -87,7 +87,7 @@ __C.TEST = edict()
 # Scales to use during testing (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
 # __C.TEST.SCALES = (350,)
-__C.TEST.SCALES = (350,)
+__C.TEST.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
 __C.TEST.MAX_SIZE = 1000
@@ -108,8 +108,8 @@ __C.TEST.BBOX_REG = True
 #
 
 # now for the overall settings ---- by Tingwu Wang
-__C.MULTI_LABEL = True
-__C.MULTI_LABEL_SOFTMAX = True
+__C.MULTI_LABEL = False
+__C.MULTI_LABEL_SOFTMAX = False
 __C.NUM_MULTI_LABEL_TEXTURE = 9
 __C.NUM_MULTI_LABEL_SLEEVE = 3
 __C.NUM_MULTI_LABEL_NECKBAND = 10
@@ -123,7 +123,7 @@ __C.ATTR_THRESH = 0.3
 # set this variable to false if we want 26 class
 __C.ThreeClass = True
 __C.SEP_DETECTOR = True
-__C.SEP_DETECTOR_NUM = 2
+__C.SEP_DETECTOR_NUM = 1
 
 # set BALANCED True if we want more duplicate data in the 
 # third calss
@@ -139,10 +139,10 @@ __C.TESTTYPE1000 = False
 # the hdf5 generate parameters
 __C.HDF5_NUM_CLASS = 3
 __C.HDF5_NUM_LABEL = 22
-__C.HDF5_BYPASS_SYS_IM_ROIS = True
+__C.HDF5_BYPASS_SYS_IM_ROIS = False
 __C.HDF5_IMAGE_HEIGHT = 350
 __C.HDF5_IMAGE_WIDTH = 350
-__C.HDF5_TEST = True
+__C.HDF5_TEST = False
 
 
 # The mapping from image coordinates to feature map coordinates might cause
