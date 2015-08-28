@@ -140,6 +140,7 @@ if __name__ == '__main__':
         prototxt = os.path.join(cfg.ROOT_DIR, 'models', 'ClothCaffeNet',
                                 'test.prototxt')
     else:
+        assert False, 'The multi_label is not supported in the demo'
         caffemodel = os.path.join(cfg.ROOT_DIR +
             '/output/default/clothesDataset_train_3CL=True_MUL_LAB=True',
             'caffenet_fast_rcnn_iter_40000.caffemodel')
@@ -156,7 +157,7 @@ if __name__ == '__main__':
         caffe.set_device(args.gpu_id)
         
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
-    if args.version == 2:        
+    if args.version == 2:
         ROOT_DIR = os.path.abspath( \
             os.path.join(os.path.dirname(__file__), '..'))
 
